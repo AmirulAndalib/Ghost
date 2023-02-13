@@ -6504,11 +6504,6 @@ async-promise-queue@^1.0.3, async-promise-queue@^1.0.5:
     async "^2.4.1"
     debug "^2.6.8"
 
-async@3.2.3:
-  version "3.2.3"
-  resolved "https://registry.yarnpkg.com/async/-/async-3.2.3.tgz#ac53dafd3f4720ee9e8a160628f18ea91df196c9"
-  integrity sha512-spZRyzKL5l5BZQrr/6m/SqFdBN0q3OCI0f9rjfBzCMBIP4p75P620rR3gTmaksNOhmzgdxcaxdNfMy6anrbM0g==
-
 async@^2.4.1, async@^2.6.4:
   version "2.6.4"
   resolved "https://registry.yarnpkg.com/async/-/async-2.6.4.tgz#706b7ff6084664cd7eae713f6f965433b5504221"
@@ -8725,14 +8720,13 @@ cache-manager-ioredis@2.1.0:
   dependencies:
     ioredis "^4.14.1"
 
-cache-manager@4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/cache-manager/-/cache-manager-4.1.0.tgz#aa986421f1c975a862d6de88edb9ab1d30f4bd39"
-  integrity sha512-ZGM6dLxrP65bfOZmcviWMadUOCICqpLs92+P/S5tj8onz+k+tB7Gr+SAgOUHCQtfm2gYEQDHiKeul4+tYPOJ8A==
+cache-manager@5.1.6:
+  version "5.1.6"
+  resolved "https://registry.yarnpkg.com/cache-manager/-/cache-manager-5.1.6.tgz#e0a97f29c1f9970b11ff4acceba70eca6c5592e8"
+  integrity sha512-Q1A8ESC9sPgjSebfJl7DWUjcm3Sf5E4b5D9dspy0XCNYLMhcMOrPyTDVTYDDtpVk9JRt3uercpWZAlCsfhlDYQ==
   dependencies:
-    async "3.2.3"
     lodash.clonedeep "^4.5.0"
-    lru-cache "^7.10.1"
+    lru-cache "^7.14.0"
 
 cacheable-lookup@^5.0.3:
   version "5.0.4"
@@ -18808,7 +18802,7 @@ lru-cache@^6.0.0:
   dependencies:
     yallist "^4.0.0"
 
-lru-cache@^7.10.1, lru-cache@^7.14.1, lru-cache@^7.7.1:
+lru-cache@^7.14.0, lru-cache@^7.14.1, lru-cache@^7.7.1:
   version "7.14.1"
   resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-7.14.1.tgz#8da8d2f5f59827edb388e63e459ac23d6d408fea"
   integrity sha512-ysxwsnTKdAx96aTRdhDOCQfDgbHnt8SK0KY8SEjO0wHinhWOFTESbjVCMPbU1uGXg/ch4lifqx0wfjOawU2+WA==
