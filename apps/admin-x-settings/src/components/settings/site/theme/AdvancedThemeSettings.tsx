@@ -1,14 +1,12 @@
-import Button, {ButtonProps} from '../../../../admin-x-ds/global/Button';
-import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
-import List from '../../../../admin-x-ds/global/List';
-import ListItem from '../../../../admin-x-ds/global/ListItem';
-import Menu from '../../../../admin-x-ds/global/Menu';
-import ModalPage from '../../../../admin-x-ds/global/modal/ModalPage';
+import InvalidThemeModal, {FatalErrors} from './InvalidThemeModal';
 import NiceModal from '@ebay/nice-modal-react';
 import React from 'react';
-import useHandleError from '../../../../utils/api/handleError';
-import {Theme, isActiveTheme, isDefaultTheme, isDeletableTheme, isLegacyTheme, useActivateTheme, useDeleteTheme} from '../../../../api/themes';
-import {downloadFile, getGhostPaths} from '../../../../utils/helpers';
+import useCustomFonts from '../../../../hooks/useCustomFonts';
+import {Button, ButtonProps, ConfirmationModal, List, ListItem, Menu, ModalPage, showToast} from '@tryghost/admin-x-design-system';
+import {JSONError} from '@tryghost/admin-x-framework/errors';
+import {Theme, isActiveTheme, isDefaultTheme, isDeletableTheme, isLegacyTheme, useActivateTheme, useDeleteTheme} from '@tryghost/admin-x-framework/api/themes';
+import {downloadFile, getGhostPaths} from '@tryghost/admin-x-framework/helpers';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
 interface ThemeActionProps {
     theme: Theme;
@@ -51,13 +49,39 @@ const ThemeActions: React.FC<ThemeActionProps> = ({
 }) => {
     const {mutateAsync: activateTheme} = useActivateTheme();
     const {mutateAsync: deleteTheme} = useDeleteTheme();
+    const {refreshActiveThemeData} = useCustomFonts();
     const handleError = useHandleError();
 
     const handleActivate = async () => {
         try {
             await activateTheme(theme.name);
+            refreshActiveThemeData();
+            showToast({
+                title: 'Theme activated',
+                type: 'success',
+                message: <div><span className='capitalize'>{theme.name}</span> is now your active theme</div>
+            });
         } catch (e) {
-            handleError(e);
+            let fatalErrors: FatalErrors | null = null;
+            if (e instanceof JSONError && e.response?.status === 422 && e.data?.errors) {
+                fatalErrors = (e.data.errors as any) as FatalErrors;
+            } else {
+                handleError(e);
+            }
+            let title = 'Invalid Theme';
+            let prompt = <>This theme is invalid and cannot be activated. Fix the following errors and re-upload the theme</>;
+
+            if (fatalErrors) {
+                NiceModal.show(InvalidThemeModal, {
+                    title,
+                    prompt,
+                    fatalErrors,
+                    onRetry: async (modal) => {
+                        modal?.remove();
+                        handleActivate();
+                    }
+                });
+            }
         }
     };
 
@@ -130,13 +154,14 @@ const ThemeActions: React.FC<ThemeActionProps> = ({
     }
 
     const buttonProps: ButtonProps = {
+        iconColorClass: 'text-base',
         size: 'sm'
     };
 
     return (
         <div className='-mr-3 flex items-center gap-4'>
             {actions}
-            <Menu items={menuItems} position='left' triggerButtonProps={buttonProps} />
+            <Menu items={menuItems} position='end' triggerButtonProps={buttonProps} />
         </div>
     );
 };
@@ -151,7 +176,11 @@ const ThemeList:React.FC<ThemeSettingProps> = ({
             return 1; // b comes before a
         } else {
             // Both have the same active status, sort alphabetically
-            return a.name.localeCompare(b.name);
+            if (a.package?.name && b.package?.name) {
+                return a.package.name.localeCompare(b.package.name);
+            } else {
+                return a.name.localeCompare(b.name);
+            }
         }
     });
 

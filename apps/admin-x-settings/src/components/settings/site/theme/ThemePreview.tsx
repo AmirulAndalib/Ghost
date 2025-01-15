@@ -1,15 +1,8 @@
-import Breadcrumbs from '../../../../admin-x-ds/global/Breadcrumbs';
-import Button from '../../../../admin-x-ds/global/Button';
-import ButtonGroup from '../../../../admin-x-ds/global/ButtonGroup';
-import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
-import DesktopChrome from '../../../../admin-x-ds/global/chrome/DesktopChrome';
-import MobileChrome from '../../../../admin-x-ds/global/chrome/MobileChrome';
 import NiceModal from '@ebay/nice-modal-react';
-import PageHeader from '../../../../admin-x-ds/global/layout/PageHeader';
 import React, {useState} from 'react';
-import Select, {SelectOption} from '../../../../admin-x-ds/global/form/Select';
-import {OfficialTheme, ThemeVariant} from '../../../providers/ServiceProvider';
-import {Theme} from '../../../../api/themes';
+import {Breadcrumbs, Button, ButtonGroup, ConfirmationModal, DesktopChrome, MobileChrome, PageHeader, Select, SelectOption} from '@tryghost/admin-x-design-system';
+import {OfficialTheme, ThemeVariant} from '../../../providers/SettingsAppProvider';
+import {Theme, isDefaultOrLegacyTheme} from '@tryghost/admin-x-framework/api/themes';
 
 const hasVariants = (theme: OfficialTheme) => theme.variants && theme.variants.length > 0;
 
@@ -41,7 +34,6 @@ const ThemePreview: React.FC<{
     isInstalling,
     installedTheme,
     onBack,
-    onClose,
     onInstall
 }) => {
     const [previewMode, setPreviewMode] = useState('desktop');
@@ -72,14 +64,14 @@ const ThemePreview: React.FC<{
 
     if (isInstalling) {
         installButtonLabel = 'Installing...';
-    } else if (selectedTheme.ref === 'default') {
+    } else if (isDefaultOrLegacyTheme(selectedTheme) && !installedTheme?.active) {
         installButtonLabel = `Activate ${selectedTheme.name}`;
     } else if (installedTheme) {
         installButtonLabel = `Update ${selectedTheme.name}`;
     }
 
     const handleInstall = () => {
-        if (installedTheme && selectedTheme.ref !== 'default') {
+        if (installedTheme && !isDefaultOrLegacyTheme(selectedTheme)) {
             NiceModal.show(ConfirmationModal, {
                 title: 'Overwrite theme',
                 prompt: (
@@ -108,7 +100,6 @@ const ThemePreview: React.FC<{
                 containerClassName='whitespace-nowrap'
                 itemClassName='hidden md:!block md:!visible'
                 items={[
-                    {label: 'Design', onClick: onClose},
                     {label: 'Change theme', onClick: onBack},
                     {label: selectedTheme.name}
                 ]}
@@ -126,6 +117,7 @@ const ThemePreview: React.FC<{
                         fullWidth={false}
                         options={variantOptions}
                         selectedOption={selectedVariant}
+                        clearBg
                         onSelect={(option) => {
                             setSelectedVariant(option || undefined);
                         }}
@@ -169,7 +161,7 @@ const ThemePreview: React.FC<{
     return (
         <div className='absolute inset-0 z-[100]'>
             <PageHeader containerClassName='bg-grey-50 dark:bg-black z-[100]' left={left} right={right} sticky={false} />
-            <div className='flex h-[calc(100%-74px)] grow flex-col items-center justify-center bg-grey-50 dark:bg-black'>
+            <div className='flex h-[calc(100%-92px)] grow flex-col items-center justify-center bg-grey-50 dark:bg-black'>
                 {previewMode === 'desktop' ?
                     <DesktopChrome>
                         <iframe

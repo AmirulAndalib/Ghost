@@ -5,11 +5,12 @@ const SettingsBreadService = require('../../../../../core/server/services/settin
 const urlUtils = require('../../../../../core/shared/url-utils.js');
 const {mockManager} = require('../../../../utils/e2e-framework');
 const should = require('should');
-
+const emailAddress = require('../../../../../core/server/services/email-address');
 describe('UNIT > Settings BREAD Service:', function () {
     let emailMockReceiver;
 
     beforeEach(function () {
+        emailAddress.init();
         emailMockReceiver = mockManager.mockMail();
     });
 
@@ -186,6 +187,17 @@ describe('UNIT > Settings BREAD Service:', function () {
                 labsService: {
                     isSet() {
                         return false;
+                    }
+                },
+                emailAddressService: {
+                    service: {
+                        validate() {
+                            return {
+                                allowed: true,
+                                verificationEmailRequired: true
+                            };
+                        },
+                        defaultFromAddress: 'noreply@example.com'
                     }
                 }
             });

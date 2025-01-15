@@ -17,7 +17,7 @@ export default AuthenticatedRoute.extend({
     },
 
     setupController(controller, model, transition) {
-        if (transition.from?.name === 'posts.analytics') {
+        if (transition.from?.name === 'posts.analytics' && transition.to?.name !== 'lexical-editor.new') {
             controller.fromAnalytics = true;
         }
     },
@@ -39,7 +39,8 @@ export default AuthenticatedRoute.extend({
         },
 
         authorizationFailed() {
-            this.controller.send('toggleReAuthenticateModal');
+            // noop - re-auth is handled by controller save
+            return;
         },
 
         willTransition(transition) {

@@ -1,12 +1,9 @@
-import Button from '../../../admin-x-ds/global/Button';
 import React from 'react';
-import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
-import SettingGroupContent from '../../../admin-x-ds/settings/SettingGroupContent';
-import Toggle from '../../../admin-x-ds/global/form/Toggle';
+import TopLevelGroup from '../../TopLevelGroup';
 import useSettingGroup from '../../../hooks/useSettingGroup';
-import {getSettingValues} from '../../../api/settings';
-import {usePostsExports} from '../../../api/posts';
-import {withErrorBoundary} from '../../../admin-x-ds/global/ErrorBoundary';
+import {Button, Separator, SettingGroupContent, Toggle, withErrorBoundary} from '@tryghost/admin-x-design-system';
+import {getSettingValues} from '@tryghost/admin-x-framework/api/settings';
+import {usePostsExports} from '@tryghost/admin-x-framework/api/posts';
 
 const Analytics: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {
@@ -51,31 +48,46 @@ const Analytics: React.FC<{ keywords: string[] }> = ({keywords}) => {
     };
 
     const inputs = (
-        <SettingGroupContent columns={2}>
+        <SettingGroupContent className="analytics-settings !gap-y-0" columns={1}>
             <Toggle
                 checked={trackEmailOpens}
+                direction='rtl'
+                gap='gap-0'
                 label='Newsletter opens'
+                labelClasses='py-4 w-full'
                 onChange={(e) => {
                     handleToggleChange('email_track_opens', e);
                 }}
             />
+            <Separator className="border-grey-200 dark:border-grey-900" />
             <Toggle
                 checked={trackEmailClicks}
+                direction='rtl'
+                gap='gap-0'
                 label='Newsletter clicks'
+                labelClasses='py-4 w-full'
                 onChange={(e) => {
                     handleToggleChange('email_track_clicks', e);
                 }}
             />
+            <Separator className="border-grey-200 dark:border-grey-900" />
             <Toggle
                 checked={trackMemberSources}
+                direction='rtl'
+                gap='gap-0'
                 label='Member sources'
+                labelClasses='py-4 w-full'
                 onChange={(e) => {
                     handleToggleChange('members_track_sources', e);
                 }}
             />
+            <Separator className="border-grey-200 dark:border-grey-900" />
             <Toggle
                 checked={outboundLinkTagging}
+                direction='rtl'
+                gap='gap-0'
                 label='Outbound link tagging'
+                labelClasses='py-4 w-full'
                 onChange={(e) => {
                     handleToggleChange('outbound_link_tagging', e);
                 }}
@@ -84,7 +96,7 @@ const Analytics: React.FC<{ keywords: string[] }> = ({keywords}) => {
     );
 
     return (
-        <SettingGroup
+        <TopLevelGroup
             description='Decide what data you collect from your members'
             isEditing={isEditing}
             keywords={keywords}
@@ -102,7 +114,7 @@ const Analytics: React.FC<{ keywords: string[] }> = ({keywords}) => {
                 <Button color='green' label='Export' link linkWithPadding onClick={exportPosts} />
                 <a className='text-sm text-green' href="https://ghost.org/help/post-analytics/" rel="noopener noreferrer" target="_blank">Learn about analytics</a>
             </div>
-        </SettingGroup>
+        </TopLevelGroup>
     );
 };
 

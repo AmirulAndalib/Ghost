@@ -90,7 +90,7 @@
 //             // add a suspended user
 //             suspendedUser = this.server.create('user', {email: 'suspended@example.com', roles: [adminRole], status: 'inactive'});
 
-//             return await authenticateSession();
+//             await authenticateSession();
 //         });
 
 //         it('it renders and navigates correctly', async function () {
@@ -101,9 +101,6 @@
 
 //             // doesn't do any redirecting
 //             expect(currentURL(), 'currentURL').to.equal('/settings/staff');
-
-//             // it has correct page title
-//             expect(document.title, 'page title').to.equal('Staff - Test Blog');
 
 //             // it shows active users in active section
 //             expect(
@@ -133,9 +130,6 @@
 
 //             // url is correct
 //             expect(currentURL(), 'url after clicking user').to.equal(`/settings/staff/${user2.slug}`);
-
-//             // title is correct
-//             expect(document.title, 'title after clicking user').to.equal('Staff - User - Test Blog');
 
 //             // view title should exist and be linkable and active
 //             expect(
@@ -919,7 +913,7 @@
 //             // add an expired invite
 //             this.server.create('invite', {expires: moment.utc().subtract(1, 'day').valueOf(), role: adminRole});
 
-//             return await authenticateSession();
+//             await authenticateSession();
 //         });
 
 //         describe('existing user', function () {
@@ -978,7 +972,7 @@
 //                 });
 //             });
 
-//             return await authenticateSession();
+//             await authenticateSession();
 //         });
 
 //         it('is redirected to user profile page', async function () {

@@ -5,7 +5,7 @@ import CloseButton from '../common/CloseButton';
 import AppContext from '../../AppContext';
 import InputForm from '../common/InputForm';
 import {ValidateInputForm} from '../../utils/form';
-import {isSigninAllowed} from '../../utils/helpers';
+import {hasAvailablePrices, isSigninAllowed, isSignupAllowed} from '../../utils/helpers';
 import {ReactComponent as InvitationIcon} from '../../images/icons/invitation.svg';
 
 export default class SigninPage extends React.Component {
@@ -31,14 +31,14 @@ export default class SigninPage extends React.Component {
         e.preventDefault();
         this.setState((state) => {
             return {
-                errors: ValidateInputForm({fields: this.getInputFields({state})})
+                errors: ValidateInputForm({fields: this.getInputFields({state}), t: this.context.t})
             };
         }, async () => {
-            const {email, errors} = this.state;
+            const {email, phonenumber, errors} = this.state;
             const {redirect} = this.context.pageData ?? {};
             const hasFormErrors = (errors && Object.values(errors).filter(d => !!d).length > 0);
             if (!hasFormErrors) {
-                this.context.onAction('signin', {email, redirect});
+                this.context.onAction('signin', {email, phonenumber, redirect});
             }
         });
     }
@@ -71,6 +71,18 @@ export default class SigninPage extends React.Component {
                 required: true,
                 errorMessage: errors.email || '',
                 autoFocus: true
+            },
+            {
+                type: 'text',
+                value: state.phonenumber,
+                placeholder: '+1 (123) 456-7890',
+                // Doesn't need translation, hidden field
+                label: 'Phone number',
+                name: 'phonenumber',
+                required: false,
+                tabindex: -1,
+                autocomplete: 'off',
+                hidden: true
             }
         ];
         return fields;
@@ -119,6 +131,7 @@ export default class SigninPage extends React.Component {
 
     renderForm() {
         const {site, t} = this.context;
+        const isSignupAvailable = isSignupAllowed({site}) && hasAvailablePrices({site});
 
         if (!isSigninAllowed({site})) {
             return (
@@ -146,7 +159,7 @@ export default class SigninPage extends React.Component {
                 </div>
                 <footer className='gh-portal-signin-footer'>
                     {this.renderSubmitButton()}
-                    {this.renderSignupMessage()}
+                    {isSignupAvailable && this.renderSignupMessage()}
                 </footer>
             </section>
         );

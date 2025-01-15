@@ -1,17 +1,12 @@
-import Button from '../../../../admin-x-ds/global/Button';
 import FeatureToggle from './FeatureToggle';
-import FileUpload from '../../../../admin-x-ds/global/form/FileUpload';
 import LabItem from './LabItem';
-import List from '../../../../admin-x-ds/global/List';
 import React, {useState} from 'react';
-import useHandleError from '../../../../utils/api/handleError';
-import useRouting from '../../../../hooks/useRouting';
-import {downloadRedirects, useUploadRedirects} from '../../../../api/redirects';
-import {downloadRoutes, useUploadRoutes} from '../../../../api/routes';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
+import {Button, FileUpload, List, showToast} from '@tryghost/admin-x-design-system';
+import {downloadRedirects, useUploadRedirects} from '@tryghost/admin-x-framework/api/redirects';
+import {downloadRoutes, useUploadRoutes} from '@tryghost/admin-x-framework/api/routes';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
 const BetaFeatures: React.FC = () => {
-    const {updateRoute} = useRouting();
     const {mutateAsync: uploadRedirects} = useUploadRedirects();
     const {mutateAsync: uploadRoutes} = useUploadRoutes();
     const handleError = useHandleError();
@@ -21,9 +16,13 @@ const BetaFeatures: React.FC = () => {
     return (
         <List titleSeparator={false}>
             <LabItem
-                action={<Button color='grey' label='Open' size='sm' onClick={() => updateRoute({isExternal: true, route: 'migrate'})} />}
-                detail={<>A <a className='text-green' href="https://ghost.org/help/importing-from-substack/" rel="noopener noreferrer" target="_blank">step-by-step tool</a> to easily import all your content, members and paid subscriptions</>}
-                title='Substack migrator' />
+                action={<FeatureToggle flag="editorExcerpt" />}
+                detail={<>Adds the excerpt input below the post title in the editor</>}
+                title='Show post excerpt inline' />
+            <LabItem
+                action={<FeatureToggle flag="additionalPaymentMethods" />}
+                detail={<>Enable support for CashApp, iDEAL, Bancontact, and others. <a className='text-green' href="https://ghost.org/help/payment-methods" rel="noopener noreferrer" target="_blank">Learn more &rarr;</a></>}
+                title='Additional payment methods' />
             <LabItem
                 action={<FeatureToggle flag='i18n' />}
                 detail={<>Translate your membership flows into your publication language (<a className='text-green' href="https://github.com/TryGhost/Ghost/tree/main/ghost/i18n/locales" rel="noopener noreferrer" target="_blank">supported languages</a>). Don’t see yours? <a className='text-green' href="https://forum.ghost.org/t/help-translate-ghost-beta/37461" rel="noopener noreferrer" target="_blank">Get involved</a></>}
@@ -37,8 +36,8 @@ const BetaFeatures: React.FC = () => {
                                 setRedirectsUploading(true);
                                 await uploadRedirects(file);
                                 showToast({
-                                    type: 'success',
-                                    message: 'Redirects uploaded successfully'
+                                    title: 'Redirects uploaded',
+                                    type: 'success'
                                 });
                             } catch (e) {
                                 handleError(e);
@@ -63,7 +62,7 @@ const BetaFeatures: React.FC = () => {
                                 await uploadRoutes(file);
                                 showToast({
                                     type: 'success',
-                                    message: 'Routes uploaded successfully'
+                                    title: 'Routes uploaded'
                                 });
                             } catch (e) {
                                 handleError(e);

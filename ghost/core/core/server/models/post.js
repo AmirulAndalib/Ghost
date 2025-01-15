@@ -1,6 +1,6 @@
 // # Post Model
 const _ = require('lodash');
-const uuid = require('uuid');
+const crypto = require('crypto');
 const moment = require('moment');
 const {sequence} = require('@tryghost/promise');
 const tpl = require('@tryghost/tpl');
@@ -89,7 +89,7 @@ Post = ghostBookshelf.Model.extend({
         }
 
         return {
-            uuid: uuid.v4(),
+            uuid: crypto.randomUUID(),
             status: 'draft',
             featured: false,
             type: 'post',
@@ -392,6 +392,11 @@ Post = ghostBookshelf.Model.extend({
             const html = await lexicalLib.render(model.get('lexical'));
             const plaintext = htmlToPlaintext.excerpt(html);
 
+            // avoid a DB query if we have no html - knex will set it to an empty string rather than NULL
+            if (!html && !model.get('plaintext')) {
+                return model;
+            }
+
             // set model attributes so they are available immediately in code that uses the returned model
             model.set('html', html);
             model.set('plaintext', plaintext);
@@ -613,6 +618,7 @@ Post = ghostBookshelf.Model.extend({
         // an exception for ?source=html which always sets both when the lexical editor is enabled.
         // That's necessary because at the input serializer layer we don't have access to the
         // actual model to check if this would result in a change of format
+
         if (this.previous('mobiledoc') && this.get('lexical')) {
             this.set('lexical', null);
         } else if (this.get('mobiledoc') && this.get('lexical')) {
@@ -715,7 +721,7 @@ Post = ghostBookshelf.Model.extend({
         }
 
         if (!this.get('mobiledoc') && !this.get('lexical')) {
-            this.set('mobiledoc', JSON.stringify(mobiledocLib.blankDocument));
+            this.set('lexical', JSON.stringify(lexicalLib.blankDocument));
         }
 
         // If we're force re-rendering we want to make sure that all image cards
@@ -736,7 +742,7 @@ Post = ghostBookshelf.Model.extend({
             )
         ) {
             try {
-                this.set('html', mobiledocLib.mobiledocHtmlRenderer.render(JSON.parse(this.get('mobiledoc'))));
+                this.set('html', mobiledocLib.render(JSON.parse(this.get('mobiledoc'))));
             } catch (err) {
                 throw new errors.ValidationError({
                     message: tpl(messages.invalidMobiledocStructure),
@@ -898,7 +904,7 @@ Post = ghostBookshelf.Model.extend({
             ops.push(function updateRevisions() {
                 return ghostBookshelf.model('MobiledocRevision')
                     .findAll(Object.assign({
-                        filter: `post_id:${model.id}`,
+                        filter: `post_id:'${model.id}'`,
                         columns: ['id']
                     }, _.pick(options, 'transacting')))
                     .then((revisions) => {
@@ -952,7 +958,7 @@ Post = ghostBookshelf.Model.extend({
             ops.push(async function updateRevisions() {
                 const revisionModels = await ghostBookshelf.model('PostRevision')
                     .findAll(Object.assign({
-                        filter: `post_id:${model.id}`,
+                        filter: `post_id:'${model.id}'`,
                         columns: ['id', 'lexical', 'created_at', 'author_id', 'title', 'reason', 'post_status', 'created_at_ts', 'feature_image']
                     }, _.pick(options, 'transacting')));
 
@@ -967,6 +973,7 @@ Post = ghostBookshelf.Model.extend({
                     feature_image_alt: model.get('posts_meta')?.feature_image_alt,
                     feature_image_caption: model.get('posts_meta')?.feature_image_caption,
                     title: model.get('title'),
+                    custom_excerpt: model.get('custom_excerpt'),
                     post_status: model.get('status')
                 };
 
@@ -983,12 +990,14 @@ Post = ghostBookshelf.Model.extend({
         }
 
         // CASE: Convert post to lexical on the fly
-        if (labs.isSet('lexicalEditor') && options.convert_to_lexical) {
+        if (options.convert_to_lexical) {
             ops.push(async function convertToLexical() {
                 const mobiledoc = model.get('mobiledoc');
-                const lexical = mobiledocToLexical(mobiledoc);
-                model.set('lexical', lexical);
-                model.set('mobiledoc', null);
+                if (mobiledoc !== null) { // only run conversion when there is a mobiledoc string
+                    const lexical = mobiledocToLexical(mobiledoc);
+                    model.set('lexical', lexical);
+                    model.set('mobiledoc', null);
+                }
             });
         }
 
@@ -996,6 +1005,12 @@ Post = ghostBookshelf.Model.extend({
             this.set('tiers', this.get('tiers').map(t => ({
                 id: t.id
             })));
+
+            // Don't associate the free tier with the post
+            const freeTier = await ghostBookshelf.model('Product').findOne({type: 'free'}, {require: false, transacting: options.transacting ?? undefined});
+            if (freeTier) {
+                this.set('tiers', this.get('tiers').filter(t => t.id !== freeTier.id));
+            }
         }
 
         if (labs.isSet('collectionsCard') && this.get('type') === 'post' && (newStatus === 'published' || olderStatus === 'published')) {
@@ -1245,7 +1260,7 @@ Post = ghostBookshelf.Model.extend({
         // these are the only options that can be passed to Bookshelf / Knex.
         const validOptions = {
             findOne: ['columns', 'importing', 'withRelated', 'require', 'filter'],
-            findPage: ['status'],
+            findPage: ['status','selectRaw'],
 
             findAll: ['columns', 'filter'],
             destroy: ['destroyAll', 'destroyBy'],
@@ -1275,11 +1290,13 @@ Post = ghostBookshelf.Model.extend({
             options.withRelated = _.union(['authors', 'tags', 'post_revisions', 'post_revisions.author'], options.withRelated || []);
         }
 
-        const META_ATTRIBUTES = _.without(ghostBookshelf.model('PostsMeta').prototype.permittedAttributes(), 'id', 'post_id');
-
         // NOTE: only include post_meta relation when requested in 'columns' or by default
         //       optimization is needed to be able to perform .findAll on large SQLite datasets
-        if (!options.columns || (options.columns && _.intersection(META_ATTRIBUTES, options.columns).length)) {
+        if (!options.columns
+        || (
+            options.columns
+            && _.intersection(_.without(ghostBookshelf.model('PostsMeta').prototype.permittedAttributes(), 'id', 'post_id'), options.columns).length)
+        ) {
             options.withRelated = _.union(['posts_meta'], options.withRelated || []);
         }
 

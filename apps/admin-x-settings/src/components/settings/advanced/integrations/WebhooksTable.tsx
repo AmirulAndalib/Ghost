@@ -1,16 +1,10 @@
-import Button from '../../../../admin-x-ds/global/Button';
-import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
 import NiceModal from '@ebay/nice-modal-react';
-import Table from '../../../../admin-x-ds/global/Table';
-import TableCell from '../../../../admin-x-ds/global/TableCell';
-import TableHead from '../../../../admin-x-ds/global/TableHead';
-import TableRow from '../../../../admin-x-ds/global/TableRow';
 import WebhookModal from './WebhookModal';
-import useHandleError from '../../../../utils/api/handleError';
-import {Integration} from '../../../../api/integrations';
+import {Button, ConfirmationModal, Table, TableCell, TableHead, TableRow, showToast} from '@tryghost/admin-x-design-system';
+import {Integration} from '@tryghost/admin-x-framework/api/integrations';
 import {getWebhookEventLabel} from './webhookEventOptions';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
-import {useDeleteWebhook} from '../../../../api/webhooks';
+import {useDeleteWebhook} from '@tryghost/admin-x-framework/api/webhooks';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
 const WebhooksTable: React.FC<{integration: Integration}> = ({integration}) => {
     const {mutateAsync: deleteWebhook} = useDeleteWebhook();
@@ -28,7 +22,7 @@ const WebhooksTable: React.FC<{integration: Integration}> = ({integration}) => {
                     confirmModal?.remove();
                     showToast({
                         message: 'Webhook deleted',
-                        type: 'success'
+                        type: 'info'
                     });
                 } catch (e) {
                     handleError(e);
@@ -42,35 +36,36 @@ const WebhooksTable: React.FC<{integration: Integration}> = ({integration}) => {
             <TableRow bgOnHover={false}>
                 <TableHead>{integration.webhooks?.length || 0} {integration.webhooks?.length === 1 ? 'webhook' : 'webhooks'}</TableHead>
                 <TableHead>Last triggered</TableHead>
-                <TableHead />
             </TableRow>
             {integration.webhooks?.map(webhook => (
-                <TableRow
-                    action={
-                        <Button color='red' label='Delete' link onClick={(e) => {
-                            e?.stopPropagation();
-                            handleDelete(webhook.id);
-                        }} />
-                    }
-                    hideActions
-                    onClick={() => {
-                        NiceModal.show(WebhookModal, {
-                            webhook,
-                            integrationId:
+                <TableRow action={
+                    <Button color='red' label='Delete' link onClick={(e) => {
+                        e?.stopPropagation();
+                        handleDelete(webhook.id);
+                    }} />
+                }
+                bgOnHover={false}
+                hideActions
+                onClick={() => {
+                    NiceModal.show(WebhookModal, {
+                        webhook,
+                        integrationId:
                         integration.id
-                        });
-                    }}
+                    });
+                }}
                 >
-                    <TableCell className='w-1/2'>
+                    <TableCell className='w-3/4'>
                         <div className='text-sm font-semibold'>{webhook.name}</div>
                         <div className='grid grid-cols-[max-content_1fr] gap-x-1 text-xs leading-snug'>
                             <span className='text-grey-600'>Event:</span>
                             <span>{getWebhookEventLabel(webhook.event)}</span>
                             <span className='text-grey-600'>URL:</span>
-                            <span>{webhook.target_url}</span>
+                            <span className='line-clamp-3 break-all' title={webhook.target_url}>
+                                {webhook.target_url}
+                            </span>
                         </div>
                     </TableCell>
-                    <TableCell className='w-1/2 text-sm'>
+                    <TableCell className='w-1/4 text-sm'>
                         {webhook.last_triggered_at && new Date(webhook.last_triggered_at).toLocaleString('default', {
                             weekday: 'short',
                             month: 'short',

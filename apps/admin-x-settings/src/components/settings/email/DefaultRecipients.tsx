@@ -1,14 +1,10 @@
-import MultiSelect, {MultiSelectOption} from '../../../admin-x-ds/global/form/MultiSelect';
-import React, {useState} from 'react';
-import Select from '../../../admin-x-ds/global/form/Select';
-import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
-import SettingGroupContent from '../../../admin-x-ds/settings/SettingGroupContent';
+import React, {useEffect, useState} from 'react';
+import TopLevelGroup from '../../TopLevelGroup';
 import useDefaultRecipientsOptions from './useDefaultRecipientsOptions';
 import useSettingGroup from '../../../hooks/useSettingGroup';
+import {MultiSelect, MultiSelectOption, Select, SettingGroupContent, withErrorBoundary} from '@tryghost/admin-x-design-system';
 import {MultiValue} from 'react-select';
-import {getOptionLabel} from '../../../utils/helpers';
-import {getSettingValues} from '../../../api/settings';
-import {withErrorBoundary} from '../../../admin-x-ds/global/ErrorBoundary';
+import {getSettingValues} from '@tryghost/admin-x-framework/api/settings';
 
 type RefipientValueArgs = {
     defaultEmailRecipients: string;
@@ -78,6 +74,15 @@ const DefaultRecipients: React.FC<{ keywords: string[] }> = ({keywords}) => {
 
     const {loadOptions, selectedSegments, setSelectedSegments} = useDefaultRecipientsOptions(selectedOption, defaultEmailRecipientsFilter);
 
+    // Update local state when settings change (e.g., after cancel)
+    useEffect(() => {
+        const newValue = getDefaultRecipientValue({
+            defaultEmailRecipients,
+            defaultEmailRecipientsFilter
+        });
+        setSelectedOption(newValue);
+    }, [defaultEmailRecipients, defaultEmailRecipientsFilter]);
+
     const setDefaultRecipientValue = (value: string) => {
         if (['visibility', 'disabled'].includes(value)) {
             updateSetting('editor_default_email_recipients', value);
@@ -99,6 +104,9 @@ const DefaultRecipients: React.FC<{ keywords: string[] }> = ({keywords}) => {
         }
 
         setSelectedOption(value);
+        if (!isEditing) {
+            handleEditingChange(true);
+        }
     };
 
     const updateSelectedSegments = (selected: MultiValue<MultiSelectOption>) => {
@@ -111,50 +119,13 @@ const DefaultRecipients: React.FC<{ keywords: string[] }> = ({keywords}) => {
             updateSetting('editor_default_email_recipients_filter', null);
             setSelectedOption('none');
         }
+        if (!isEditing) {
+            handleEditingChange(true);
+        }
     };
 
-    const values = (
-        <SettingGroupContent
-            values={[
-                {
-                    heading: 'Default Newsletter recipients',
-                    key: 'default-recipients',
-                    value: getOptionLabel(RECIPIENT_FILTER_OPTIONS, selectedOption)
-                }
-            ]}
-        />
-    );
-
-    const form = (
-        <SettingGroupContent columns={1}>
-            <Select
-                hint='Who should be able to subscribe to your site?'
-                options={RECIPIENT_FILTER_OPTIONS}
-                selectedOption={RECIPIENT_FILTER_OPTIONS.find(option => option.value === selectedOption)}
-                testId='default-recipients-select'
-                title="Default Newsletter recipients"
-                onSelect={(option) => {
-                    if (option) {
-                        setDefaultRecipientValue(option.value);
-                    }
-                }}
-            />
-            {(selectedOption === 'segment') && selectedSegments && (
-                <MultiSelect
-                    loadOptions={loadOptions}
-                    title='Filter'
-                    values={selectedSegments}
-                    async
-                    clearBg
-                    defaultOptions
-                    onChange={updateSelectedSegments}
-                />
-            )}
-        </SettingGroupContent>
-    );
-
     return (
-        <SettingGroup
+        <TopLevelGroup
             description='When you publish new content, who do you usually want to send it to?'
             isEditing={isEditing}
             keywords={keywords}
@@ -162,12 +133,36 @@ const DefaultRecipients: React.FC<{ keywords: string[] }> = ({keywords}) => {
             saveState={saveState}
             testId='default-recipients'
             title='Default recipients'
+            hideEditButton
             onCancel={handleCancel}
             onEditingChange={handleEditingChange}
             onSave={handleSave}
         >
-            {isEditing ? form : values}
-        </SettingGroup>
+            <SettingGroupContent columns={1}>
+                <Select
+                    hint='Who should receive your posts by default?'
+                    options={RECIPIENT_FILTER_OPTIONS}
+                    selectedOption={RECIPIENT_FILTER_OPTIONS.find(option => option.value === selectedOption)}
+                    testId='default-recipients-select'
+                    title="Default Newsletter recipients"
+                    onSelect={(option) => {
+                        if (option) {
+                            setDefaultRecipientValue(option.value);
+                        }
+                    }}
+                />
+                {(selectedOption === 'segment') && selectedSegments && (
+                    <MultiSelect
+                        loadOptions={loadOptions}
+                        title='Filter'
+                        values={selectedSegments}
+                        async
+                        defaultOptions
+                        onChange={updateSelectedSegments}
+                    />
+                )}
+            </SettingGroupContent>
+        </TopLevelGroup>
     );
 };
 

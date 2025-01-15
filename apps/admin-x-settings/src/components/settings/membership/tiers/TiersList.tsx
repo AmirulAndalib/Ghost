@@ -1,12 +1,11 @@
-import Icon from '../../../../admin-x-ds/global/Icon';
-import NoValueLabel from '../../../../admin-x-ds/global/NoValueLabel';
 import React from 'react';
 import clsx from 'clsx';
-import useRouting from '../../../../hooks/useRouting';
-import {Tier} from '../../../../api/tiers';
+import {Icon, NoValueLabel} from '@tryghost/admin-x-design-system';
+import {Tier} from '@tryghost/admin-x-framework/api/tiers';
 import {TrialDaysLabel} from './TierDetailPreview';
 import {currencyToDecimal, getSymbol} from '../../../../utils/currency';
 import {numberWithCommas} from '../../../../utils/helpers';
+import {useRouting} from '@tryghost/admin-x-framework/routing';
 
 interface TiersListProps {
     tab?: 'active-tiers' | 'archive-tiers' | 'free-tier';
@@ -31,7 +30,7 @@ const TierCard: React.FC<TierCardProps> = ({tier}) => {
             <div className='w-full grow' onClick={() => {
                 updateRoute({route: `tiers/${tier.id}`});
             }}>
-                <div className='text-[1.65rem] font-bold leading-tight tracking-tight text-pink'>{tier.name}</div>
+                <div className='text-[1.65rem] font-bold leading-tight tracking-tight text-black dark:text-white'>{tier.name}</div>
                 <div className='mt-2 flex items-baseline'>
                     <span className="ml-1 translate-y-[-3px] text-md font-bold uppercase">{currencySymbol}</span>
                     <span className='text-xl font-bold tracking-tighter'>{numberWithCommas(currencyToDecimal(tier.monthly_price || 0))}</span>

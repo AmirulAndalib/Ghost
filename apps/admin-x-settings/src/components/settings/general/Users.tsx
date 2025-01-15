@@ -1,21 +1,15 @@
-import Avatar from '../../../admin-x-ds/global/Avatar';
-import Button from '../../../admin-x-ds/global/Button';
-import List from '../../../admin-x-ds/global/List';
-import ListItem from '../../../admin-x-ds/global/ListItem';
-import NoValueLabel from '../../../admin-x-ds/global/NoValueLabel';
-import React, {useState} from 'react';
-import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
-import TabView from '../../../admin-x-ds/global/TabView';
+import React, {useEffect, useState} from 'react';
+import TopLevelGroup from '../../TopLevelGroup';
 import clsx from 'clsx';
-import useHandleError from '../../../utils/api/handleError';
-import useRouting from '../../../hooks/useRouting';
+import useQueryParams from '../../../hooks/useQueryParams';
 import useStaffUsers from '../../../hooks/useStaffUsers';
-import {User, hasAdminAccess, isContributorUser, isEditorUser} from '../../../api/users';
-import {UserInvite, useAddInvite, useDeleteInvite} from '../../../api/invites';
+import {Avatar, Button, List, ListItem, NoValueLabel, TabView, showToast, withErrorBoundary} from '@tryghost/admin-x-design-system';
+import {User, hasAdminAccess, isContributorUser, isEditorUser} from '@tryghost/admin-x-framework/api/users';
+import {UserInvite, useAddInvite, useDeleteInvite} from '@tryghost/admin-x-framework/api/invites';
 import {generateAvatarColor, getInitials} from '../../../utils/helpers';
-import {showToast} from '../../../admin-x-ds/global/Toast';
 import {useGlobalData} from '../../providers/GlobalDataProvider';
-import {withErrorBoundary} from '../../../admin-x-ds/global/ErrorBoundary';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
+import {useRouting} from '@tryghost/admin-x-framework/routing';
 
 interface OwnerProps {
     user: User;
@@ -49,7 +43,7 @@ const Owner: React.FC<OwnerProps> = ({user}) => {
 
     return (
         <div className={clsx('group flex gap-3', hasAdminAccess(currentUser) && 'cursor-pointer')} data-testid='owner-user' onClick={showDetailModal}>
-            <Avatar bgColor={generateAvatarColor((user.name ? user.name : user.email))} image={user.profile_image} label={getInitials(user.name)} labelColor='white' size='lg' />
+            <Avatar bgColor={generateAvatarColor((user.name ? user.name : user.email))} image={user.profile_image ?? undefined} label={getInitials(user.name)} labelColor='white' size='lg' />
             <div className='flex flex-col'>
                 <span>{user.name} &mdash; <strong>Owner</strong> {hasAdminAccess(currentUser) && <button className='ml-2 inline-block text-sm font-bold text-green group-hover:visible md:invisible' type='button'>View profile</button>}</span>
                 <span className='text-xs text-grey-700'>{user.email}</span>
@@ -90,7 +84,7 @@ const UsersList: React.FC<UsersListProps> = ({users, groupname}) => {
                     <ListItem
                         key={user.id}
                         action={canEdit && <Button color='green' label='Edit' link={true} onClick={() => showDetailModal(user)}/>}
-                        avatar={(<Avatar bgColor={generateAvatarColor((user.name ? user.name : user.email))} image={user.profile_image} label={getInitials(user.name)} labelColor='white' />)}
+                        avatar={(<Avatar bgColor={generateAvatarColor((user.name ? user.name : user.email))} image={user.profile_image ?? undefined} label={getInitials(user.name)} labelColor='white' />)}
                         bgOnHover={canEdit}
                         className='min-h-[64px]'
                         detail={user.email}
@@ -133,7 +127,8 @@ const UserInviteActions: React.FC<{invite: UserInvite}> = ({invite}) => {
                         setRevokeState('progress');
                         await deleteInvite(invite.id);
                         showToast({
-                            message: `Invitation revoked (${invite.email})`,
+                            title: `Invitation revoked`,
+                            message: invite.email,
                             type: 'success'
                         });
                     } catch (e) {
@@ -157,7 +152,8 @@ const UserInviteActions: React.FC<{invite: UserInvite}> = ({invite}) => {
                             roleId: invite.role_id
                         });
                         showToast({
-                            message: `Invitation resent! (${invite.email})`,
+                            title: `Invitation resent`,
+                            message: invite.email,
                             type: 'success'
                         });
                     } catch (e) {
@@ -187,7 +183,7 @@ const InvitesUserList: React.FC<InviteListProps> = ({users}) => {
                     <ListItem
                         key={user.id}
                         action={<UserInviteActions invite={user} />}
-                        avatar={(<Avatar bgColor={generateAvatarColor((user.email))} image={''} label={''} labelColor='white' />)}
+                        avatar={(<Avatar bgColor={generateAvatarColor((user.email))} image={''} label={user.email.charAt(0).toUpperCase()} labelColor='white' />)}
                         className='min-h-[64px]'
                         detail={user.role}
                         hideActions={true}
@@ -225,43 +221,61 @@ const Users: React.FC<{ keywords: string[], highlight?: boolean }> = ({keywords,
     };
 
     const buttons = (
-        <Button color='green' label='Invite people' link={true} linkWithPadding onClick={() => {
+        <Button className='mt-[-5px]' color='clear' label='Invite people' size='sm' linkWithPadding onClick={() => {
             showInviteModal();
         }} />
     );
 
-    const [selectedTab, setSelectedTab] = useState('users-admins');
+    const tabParam = useQueryParams().getParam('tab');
+    const defaultTab = tabParam || 'administrators';
+    const [selectedTab, setSelectedTab] = useState(defaultTab);
+
+    useEffect(() => {
+        if (tabParam) {
+            setSelectedTab(tabParam);
+        }
+    }, [tabParam]);
+
+    const updateSelectedTab = (newTab: string) => {
+        updateRoute(`staff?tab=${newTab}`);
+        setSelectedTab(newTab);
+    };
 
     const tabs = [
         {
-            id: 'users-admins',
+            id: 'administrators',
             title: 'Administrators',
-            contents: (<UsersList groupname='administrators' users={adminUsers} />)
+            contents: (<UsersList groupname='administrators' users={adminUsers} />),
+            counter: adminUsers.length ? adminUsers.length : undefined
         },
         {
-            id: 'users-editors',
+            id: 'editors',
             title: 'Editors',
-            contents: (<UsersList groupname='editors' users={editorUsers} />)
+            contents: (<UsersList groupname='editors' users={editorUsers} />),
+            counter: editorUsers.length ? editorUsers.length : undefined
         },
         {
-            id: 'users-authors',
+            id: 'authors',
             title: 'Authors',
-            contents: (<UsersList groupname='authors' users={authorUsers} />)
+            contents: (<UsersList groupname='authors' users={authorUsers} />),
+            counter: authorUsers.length ? authorUsers.length : undefined
         },
         {
-            id: 'users-contributors',
+            id: 'contributors',
             title: 'Contributors',
-            contents: (<UsersList groupname='contributors' users={contributorUsers} />)
+            contents: (<UsersList groupname='contributors' users={contributorUsers} />),
+            counter: contributorUsers.length ? contributorUsers.length : undefined
         },
         {
-            id: 'users-invited',
+            id: 'invited',
             title: 'Invited',
-            contents: (<InvitesUserList users={invites} />)
+            contents: (<InvitesUserList users={invites} />),
+            counter: invites.length ? invites.length : undefined
         }
     ];
 
     return (
-        <SettingGroup
+        <TopLevelGroup
             customButtons={buttons}
             highlightOnModalClose={highlight}
             keywords={keywords}
@@ -270,13 +284,14 @@ const Users: React.FC<{ keywords: string[], highlight?: boolean }> = ({keywords,
             title='Staff'
         >
             <Owner user={ownerUser} />
-            <TabView selectedTab={selectedTab} tabs={tabs} onTabChange={setSelectedTab} />
+            {/* if there are no users besides the owner user, hide the tabs*/}
+            {(users.length > 1 || invites.length > 0) && <TabView selectedTab={selectedTab} tabs={tabs} testId='user-tabview' onTabChange={updateSelectedTab} />}
             {hasNextPage && <Button
                 label={`Load more (showing ${users.length}/${totalUsers} users)`}
                 link
                 onClick={() => fetchNextPage()}
             />}
-        </SettingGroup>
+        </TopLevelGroup>
     );
 };
 

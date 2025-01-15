@@ -1,13 +1,14 @@
 import CustomHeader from './CustomHeader';
-import SettingGroup from '../../../../admin-x-ds/settings/SettingGroup';
-import SettingGroupContent from '../../../../admin-x-ds/settings/SettingGroupContent';
-import Toggle from '../../../../admin-x-ds/global/form/Toggle';
 import useFeatureFlag from '../../../../hooks/useFeatureFlag';
-import {User, hasAdminAccess} from '../../../../api/users';
+import {SettingGroup, SettingGroupContent, Toggle} from '@tryghost/admin-x-design-system';
+import {User, hasAdminAccess} from '@tryghost/admin-x-framework/api/users';
+import {checkStripeEnabled} from '@tryghost/admin-x-framework/api/settings';
+import {useGlobalData} from '../../../providers/GlobalDataProvider';
 
 const EmailNotificationsInputs: React.FC<{ user: User; setUserData: (user: User) => void; }> = ({user, setUserData}) => {
+    const {config, settings} = useGlobalData();
     const hasWebmentions = useFeatureFlag('webmentions');
-    const hasRecommendations = useFeatureFlag('recommendations');
+    const hasStripeEnabled = checkStripeEnabled(settings || [], config || {});
 
     return (
         <SettingGroupContent>
@@ -30,7 +31,7 @@ const EmailNotificationsInputs: React.FC<{ user: User; setUserData: (user: User)
                         setUserData?.({...user, mention_notifications: e.target.checked});
                     }}
                 />}
-                {hasRecommendations && <Toggle
+                <Toggle
                     checked={user.recommendation_notifications}
                     direction='rtl'
                     hint='Every time another publisher recommends you to their audience'
@@ -38,7 +39,7 @@ const EmailNotificationsInputs: React.FC<{ user: User; setUserData: (user: User)
                     onChange={(e) => {
                         setUserData?.({...user, recommendation_notifications: e.target.checked});
                     }}
-                />}
+                />
                 <Toggle
                     checked={user.free_member_signup_notification}
                     direction='rtl'
@@ -75,6 +76,15 @@ const EmailNotificationsInputs: React.FC<{ user: User; setUserData: (user: User)
                         setUserData?.({...user, milestone_notifications: e.target.checked});
                     }}
                 />
+                {hasStripeEnabled && <Toggle
+                    checked={user.donation_notifications}
+                    direction='rtl'
+                    hint='Every time you receive a one-time payment'
+                    label='Tips & donations'
+                    onChange={(e) => {
+                        setUserData?.({...user, donation_notifications: e.target.checked});
+                    }}
+                />}
             </>}
         </SettingGroupContent>
     );

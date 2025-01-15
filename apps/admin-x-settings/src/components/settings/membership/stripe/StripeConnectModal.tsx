@@ -1,30 +1,21 @@
 import BookmarkThumb from '../../../../assets/images/stripe-thumb.jpg';
-import Button from '../../../../admin-x-ds/global/Button';
-import ConfirmationModal from '../../../../admin-x-ds/global/modal/ConfirmationModal';
-import Form from '../../../../admin-x-ds/global/form/Form';
 import GhostLogo from '../../../../assets/images/orb-squircle.png';
 import GhostLogoPink from '../../../../assets/images/orb-pink.png';
-import Heading from '../../../../admin-x-ds/global/Heading';
-import Modal from '../../../../admin-x-ds/global/modal/Modal';
 import NiceModal, {useModal} from '@ebay/nice-modal-react';
 import React, {useState} from 'react';
-import StripeButton from '../../../../admin-x-ds/settings/StripeButton';
 import StripeLogo from '../../../../assets/images/stripe-emblem.svg';
-import TextArea from '../../../../admin-x-ds/global/form/TextArea';
-import TextField from '../../../../admin-x-ds/global/form/TextField';
-import Toggle from '../../../../admin-x-ds/global/form/Toggle';
-import useHandleError from '../../../../utils/api/handleError';
-import useRouting from '../../../../hooks/useRouting';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
-import {JSONError} from '../../../../utils/errors';
+import {Button, ConfirmationModal, Form, Heading, Modal, StripeButton, TextArea, TextField, Toggle, showToast} from '@tryghost/admin-x-design-system';
+import {JSONError} from '@tryghost/admin-x-framework/errors';
 import {ReactComponent as StripeVerified} from '../../../../assets/images/stripe-verified.svg';
-import {checkStripeEnabled, getSettingValue, getSettingValues, useDeleteStripeSettings, useEditSettings} from '../../../../api/settings';
-import {getGhostPaths} from '../../../../utils/helpers';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
+import {checkStripeEnabled, getSettingValue, getSettingValues, useDeleteStripeSettings, useEditSettings} from '@tryghost/admin-x-framework/api/settings';
+import {getGhostPaths} from '@tryghost/admin-x-framework/helpers';
 import {toast} from 'react-hot-toast';
-import {useBrowseMembers} from '../../../../api/members';
-import {useBrowseTiers, useEditTier} from '../../../../api/tiers';
+import {useBrowseMembers} from '@tryghost/admin-x-framework/api/members';
+import {useBrowseTiers, useEditTier} from '@tryghost/admin-x-framework/api/tiers';
 import {useGlobalData} from '../../../providers/GlobalDataProvider';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
+import {useRouting} from '@tryghost/admin-x-framework/routing';
 
 const RETRY_PRODUCT_SAVE_POLL_LENGTH = 1000;
 const RETRY_PRODUCT_SAVE_MAX_POLL = 15 * RETRY_PRODUCT_SAVE_POLL_LENGTH;
@@ -145,7 +136,7 @@ const Connect: React.FC = () => {
             </div>
             <StripeButton href={stripeConnectUrl} tag='a' target='_blank' />
             <Heading className='mb-2 mt-8' level={6} grey>Step 2 — <span className='text-black dark:text-white'>Paste secure key</span></Heading>
-            <TextArea clearBg={false} error={Boolean(error)} hint={error || undefined} placeholder='Paste your secure key here' onChange={onTokenChange}></TextArea>
+            <TextArea error={Boolean(error)} hint={error || undefined} placeholder='Paste your secure key here' onChange={onTokenChange}></TextArea>
             {submitEnabled && <Button className='mt-5' color='green' label='Save Stripe settings' onClick={onSubmit} />}
         </div>
     );
@@ -153,7 +144,7 @@ const Connect: React.FC = () => {
 
 const Connected: React.FC<{onClose?: () => void}> = ({onClose}) => {
     const {settings} = useGlobalData();
-    const [stripeConnectAccountName, stripeConnectLivemode] = getSettingValues(settings, ['stripe_connect_account_name', 'stripe_connect_livemode']);
+    const [stripeConnectAccountName, stripeConnectLivemode] = getSettingValues(settings, ['stripe_connect_display_name', 'stripe_connect_livemode']);
 
     const {refetch: fetchMembers, isFetching: isFetchingMembers} = useBrowseMembers({
         searchParams: {filter: 'status:paid', limit: '0'},
@@ -171,8 +162,7 @@ const Connected: React.FC<{onClose?: () => void}> = ({onClose}) => {
         // this.ghostPaths.url.api('/members/') + '?filter=status:paid&limit=0';
         NiceModal.show(ConfirmationModal, {
             title: 'Disconnect Stripe',
-            prompt: (hasActiveStripeSubscriptions ? 'Cannot disconnect while there are members with active Stripe subscriptions.' : <>You&lsquo;re about to disconnect your Stripe account {stripeConnectAccountName}
-                from this site. This will automatically turn off paid memberships on this site.</>),
+            prompt: (hasActiveStripeSubscriptions ? 'Cannot disconnect while there are members with active Stripe subscriptions.' : <>You&lsquo;re about to disconnect your Stripe account {stripeConnectAccountName} from this site. This will automatically turn off paid memberships on this site.</>),
             okLabel: hasActiveStripeSubscriptions ? '' : 'Disconnect',
             onOk: async (modal) => {
                 try {
@@ -198,7 +188,7 @@ const Connected: React.FC<{onClose?: () => void}> = ({onClose}) => {
                     <img alt='Stripe Logo' className='absolute right-10 h-16 w-16 rounded-2xl shadow-[-1.5px_0_0_1.5px_#fff] dark:shadow-[-1.5px_0_0_1.5px_black]' src={StripeLogo} />
                 </div>
                 <Heading className='text-center' level={3}>You are connected with Stripe!{stripeConnectLivemode ? null : ' (Test mode)'}</Heading>
-                <div className='mt-1'>Connected to <strong>Dummy</strong></div>
+                <div className='mt-1'>Connected to <strong>{stripeConnectAccountName ? stripeConnectAccountName : 'Test mode'}</strong></div>
             </div>
             <div className='flex flex-col items-center'>
                 <Heading level={6}>Read next</Heading>
@@ -234,8 +224,9 @@ const Direct: React.FC<{onClose: () => void}> = ({onClose}) => {
         } catch (e) {
             if (e instanceof JSONError) {
                 showToast({
-                    type: 'pageError',
-                    message: 'Failed to save settings. Please check you copied both keys correctly.'
+                    title: 'Failed to save settings',
+                    type: 'error',
+                    message: 'Check you copied both keys correctly'
                 });
                 return;
             }
@@ -293,9 +284,9 @@ const StripeConnectModal: React.FC = () => {
         }}
         cancelLabel=''
         footer={<div className='mt-8'></div>}
-        size={stripeConnectAccountId ? 740 : 520}
         testId='stripe-modal'
         title=''
+        width={stripeConnectAccountId ? 740 : 520}
         hideXOnMobile
     >
         {contents}

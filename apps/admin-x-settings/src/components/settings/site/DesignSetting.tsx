@@ -1,8 +1,8 @@
-import Button from '../../../admin-x-ds/global/Button';
+import DesignSettingsImg from '../../../assets/images/design-settings.png';
 import React from 'react';
-import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
-import useRouting from '../../../hooks/useRouting';
-import {withErrorBoundary} from '../../../admin-x-ds/global/ErrorBoundary';
+import TopLevelGroup from '../../TopLevelGroup';
+import {Button, withErrorBoundary} from '@tryghost/admin-x-design-system';
+import {useRouting} from '@tryghost/admin-x-framework/routing';
 
 const DesignSetting: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {updateRoute} = useRouting();
@@ -11,14 +11,15 @@ const DesignSetting: React.FC<{ keywords: string[] }> = ({keywords}) => {
     };
 
     return (
-        <SettingGroup
-            customButtons={<Button color='green' label='Customize' link linkWithPadding onClick={openPreviewModal}/>}
-            description="Customize the theme, colors, and layout of your site"
+        <TopLevelGroup
+            customButtons={<Button className='mt-[-5px]' color='clear' label='Customize' size='sm' onClick={openPreviewModal}/>}
+            description="Customize the style and layout of your site"
             keywords={keywords}
             navid='design'
             testId='design'
-            title="Design & branding"
-        />
+            title="Design & branding">
+            <img src={DesignSettingsImg} />
+        </TopLevelGroup>
     );
 };
 

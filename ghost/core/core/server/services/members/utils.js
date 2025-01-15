@@ -1,6 +1,12 @@
 function formatNewsletterResponse(newsletters) {
-    return newsletters.map(({id, name, description, sort_order: sortOrder}) => {
-        return {id, name, description, sort_order: sortOrder};
+    return newsletters.map(({id, uuid, name, description, sort_order: sortOrder}) => {
+        return {
+            id,
+            uuid,
+            name,
+            description,
+            sort_order: sortOrder
+        };
     });
 }
 
@@ -16,6 +22,7 @@ module.exports.formattedMemberResponse = function formattedMemberResponse(member
         firstname: member.name && member.name.split(' ')[0],
         expertise: member.expertise,
         avatar_image: member.avatar_image,
+        unsubscribe_url: member.unsubscribe_url,
         subscribed: !!member.subscribed,
         subscriptions: member.subscriptions || [],
         paid: member.status !== 'free',

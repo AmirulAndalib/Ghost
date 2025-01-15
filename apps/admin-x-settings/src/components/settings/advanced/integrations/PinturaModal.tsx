@@ -1,23 +1,17 @@
-import Button from '../../../../admin-x-ds/global/Button';
-import Form from '../../../../admin-x-ds/global/form/Form';
 import IntegrationHeader from './IntegrationHeader';
-import Modal from '../../../../admin-x-ds/global/modal/Modal';
 import NiceModal from '@ebay/nice-modal-react';
-import Toggle from '../../../../admin-x-ds/global/form/Toggle';
 import pinturaScreenshot from '../../../../assets/images/pintura-screenshot.png';
-import useHandleError from '../../../../utils/api/handleError';
-import useRouting from '../../../../hooks/useRouting';
+import {Button, Form, Modal, Toggle, showToast} from '@tryghost/admin-x-design-system';
 import {ReactComponent as Icon} from '../../../../assets/icons/pintura.svg';
-import {Setting, getSettingValues, useEditSettings} from '../../../../api/settings';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
+import {Setting, getSettingValues, useEditSettings} from '@tryghost/admin-x-framework/api/settings';
 import {useEffect, useRef, useState} from 'react';
 import {useGlobalData} from '../../../providers/GlobalDataProvider';
-import {useUploadFile} from '../../../../api/files';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
+import {useRouting} from '@tryghost/admin-x-framework/routing';
+import {useUploadFile} from '@tryghost/admin-x-framework/api/files';
 
 const PinturaModal = NiceModal.create(() => {
     const {updateRoute} = useRouting();
-    const modal = NiceModal.useModal();
-    const [enabled, setEnabled] = useState(false);
     const [uploadingState, setUploadingState] = useState({
         js: false,
         css: false
@@ -32,6 +26,29 @@ const PinturaModal = NiceModal.create(() => {
     useEffect(() => {
         setEnabled(pinturaEnabled || false);
     }, [pinturaEnabled]);
+
+    const [okLabel, setOkLabel] = useState('Save');
+    const [enabled, setEnabled] = useState<boolean>(!!pinturaEnabled);
+
+    const handleToggleChange = async () => {
+        const updates: Setting[] = [
+            {key: 'pintura', value: (enabled)}
+        ];
+        try {
+            setOkLabel('Saving...');
+            await Promise.all([
+                editSettings(updates),
+                new Promise((resolve) => {
+                    setTimeout(resolve, 1000);
+                })
+            ]);
+            setOkLabel('Saved');
+        } catch (error) {
+            handleError(error);
+        } finally {
+            setTimeout(() => setOkLabel('Save'), 1000);
+        }
+    };
 
     const jsUploadRef = useRef<HTMLInputElement>(null);
     const cssUploadRef = useRef<HTMLInputElement>(null);
@@ -66,7 +83,7 @@ const PinturaModal = NiceModal.create(() => {
 
             showToast({
                 type: 'success',
-                message: `Pintura ${form} uploaded successfully`
+                title: `Pintura ${form} uploaded`
             });
         } catch (e) {
             setUploadingState({js: false, css: false});
@@ -74,23 +91,20 @@ const PinturaModal = NiceModal.create(() => {
         }
     };
 
+    const isDirty = !(enabled === pinturaEnabled);
+
     return (
         <Modal
             afterClose={() => {
                 updateRoute('integrations');
             }}
-            cancelLabel=''
-            okColor='black'
-            okLabel='Save'
+            cancelLabel='Close'
+            dirty={isDirty}
+            okColor={okLabel === 'Saved' ? 'green' : 'black'}
+            okLabel={okLabel}
             testId='pintura-modal'
             title=''
-            onOk={async () => {
-                modal.remove();
-                updateRoute('integrations');
-                await editSettings([
-                    {key: 'pintura', value: enabled}
-                ]);
-            }}
+            onOk={handleToggleChange}
         >
             <IntegrationHeader
                 detail='Advanced image editing'
@@ -106,7 +120,7 @@ const PinturaModal = NiceModal.create(() => {
                     </div>
                     <div className='flex grow flex-col items-end justify-between gap-2 md:basis-1/2 md:gap-0'>
                         <img alt='Pintura screenshot' src={pinturaScreenshot} />
-                        <a className='-mb-1 text-sm font-bold text-green' href="https://pqina.nl/pintura/?ref=ghost.org" rel="noopener noreferrer" target="_blank">Find out more &rarr;</a>
+                        <a className='-mb-1 text-sm font-bold text-green' href="https://pqina.nl/pintura/ghost/?ref=ghost.org" rel="noopener noreferrer" target="_blank">Find out more &rarr;</a>
                     </div>
                 </div>}
 
@@ -114,7 +128,7 @@ const PinturaModal = NiceModal.create(() => {
                     <Toggle
                         checked={enabled}
                         direction='rtl'
-                        hint={<>Enable <a className='text-green' href="https://pqina.nl/pintura/?ref=ghost.org" rel="noopener noreferrer" target="_blank">Pintura</a> for editing your images in Ghost</>}
+                        hint={<>Enable <a className='text-green' href="https://pqina.nl/pintura/ghost/?ref=ghost.org" rel="noopener noreferrer" target="_blank">Pintura</a> for editing your images in Ghost</>}
                         label='Enable Pintura'
                         onChange={(e) => {
                             setEnabled(e.target.checked);

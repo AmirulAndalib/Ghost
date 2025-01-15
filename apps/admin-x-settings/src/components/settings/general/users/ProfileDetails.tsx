@@ -1,13 +1,11 @@
 import CustomHeader from './CustomHeader';
-import SettingGroup from '../../../../admin-x-ds/settings/SettingGroup';
-import SettingGroupContent from '../../../../admin-x-ds/settings/SettingGroupContent';
-import TextArea from '../../../../admin-x-ds/global/form/TextArea';
-import TextField from '../../../../admin-x-ds/global/form/TextField';
+import {SettingGroup, SettingGroupContent, TextArea, TextField} from '@tryghost/admin-x-design-system';
 import {UserDetailProps} from '../UserDetailModal';
 import {facebookHandleToUrl, facebookUrlToHandle, twitterHandleToUrl, twitterUrlToHandle, validateFacebookUrl, validateTwitterUrl} from '../../../../utils/socialUrls';
+
 import {useState} from 'react';
 
-export const DetailsInputs: React.FC<UserDetailProps> = ({errors, clearError, validators, user, setUserData}) => {
+export const DetailsInputs: React.FC<UserDetailProps> = ({errors, clearError, validateField, user, setUserData}) => {
     const [facebookUrl, setFacebookUrl] = useState(user.facebook ? facebookHandleToUrl(user.facebook) : '');
     const [twitterUrl, setTwitterUrl] = useState(user.twitter ? twitterHandleToUrl(user.twitter) : '');
 
@@ -16,23 +14,22 @@ export const DetailsInputs: React.FC<UserDetailProps> = ({errors, clearError, va
             <TextField
                 error={!!errors?.location}
                 hint={errors?.location || 'Where in the world do you live?'}
+                maxLength={65535}
                 title="Location"
                 value={user.location || ''}
-                onBlur={(e) => {
-                    validators.location({location: e.target.value});
-                }}
                 onChange={(e) => {
                     setUserData({...user, location: e.target.value});
                 }}
                 onKeyDown={() => clearError('location')} />
             <TextField
-                error={!!errors?.url}
-                hint={errors?.url || 'Have a website or blog other than this one? Link it!'}
+                error={!!errors?.website}
+                hint={errors?.website || 'Have a website or blog other than this one? Link it!'}
+                maxLength={2000}
                 title="Website"
                 value={user.website || ''}
-                onBlur={(e) => {
-                    validators.url({url: e.target.value});
-                }}
+                // onBlur={(e) => {
+                //     validateField('url', e.target.value);
+                // }}
                 onChange={(e) => {
                     setUserData({...user, website: e.target.value});
                 }}
@@ -40,10 +37,11 @@ export const DetailsInputs: React.FC<UserDetailProps> = ({errors, clearError, va
             <TextField
                 error={!!errors?.facebook}
                 hint={errors?.facebook || 'URL of your personal Facebook Profile'}
+                maxLength={2000}
                 title="Facebook profile"
                 value={facebookUrl}
                 onBlur={(e) => {
-                    if (validators.facebook({facebook: e.target.value})) {
+                    if (validateField('facebook', e.target.value)) {
                         const url = validateFacebookUrl(e.target.value);
                         setFacebookUrl(url);
                         setUserData({...user, facebook: facebookUrlToHandle(url)});
@@ -56,10 +54,11 @@ export const DetailsInputs: React.FC<UserDetailProps> = ({errors, clearError, va
             <TextField
                 error={!!errors?.twitter}
                 hint={errors?.twitter || 'URL of your X profile'}
+                maxLength={2000}
                 title="X (formerly Twitter) profile"
                 value={twitterUrl}
                 onBlur={(e) => {
-                    if (validators.twitter({twitter: e.target.value})) {
+                    if (validateField('twitter', e.target.value)) {
                         const url = validateTwitterUrl(e.target.value);
                         setTwitterUrl(url);
                         setUserData({...user, twitter: twitterUrlToHandle(url)});
@@ -72,11 +71,9 @@ export const DetailsInputs: React.FC<UserDetailProps> = ({errors, clearError, va
             <TextArea
                 error={!!errors?.bio}
                 hint={errors?.bio || <>Recommended: 200 characters. You&lsquo;ve used <span className='font-bold'>{user.bio?.length || 0}</span></>}
+                maxLength={65535}
                 title="Bio"
                 value={user.bio || ''}
-                onBlur={(e) => {
-                    validators.bio({bio: e.target.value});
-                }}
                 onChange={(e) => {
                     setUserData({...user, bio: e.target.value});
                 }}

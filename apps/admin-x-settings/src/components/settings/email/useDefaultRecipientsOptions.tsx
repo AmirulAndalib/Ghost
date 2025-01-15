@@ -1,12 +1,11 @@
-import useFilterableApi from '../../../hooks/useFilterableApi';
 import {GroupBase, MultiValue} from 'react-select';
-import {Label} from '../../../api/labels';
-import {LoadOptions, MultiSelectOption} from '../../../admin-x-ds/global/form/MultiSelect';
-import {Offer} from '../../../api/offers';
-import {Tier} from '../../../api/tiers';
-import {debounce} from '../../../utils/debounce';
+import {Label} from '@tryghost/admin-x-framework/api/labels';
+import {LoadMultiSelectOptions, MultiSelectOption, debounce} from '@tryghost/admin-x-design-system';
+import {Offer} from '@tryghost/admin-x-framework/api/offers';
+import {Tier} from '@tryghost/admin-x-framework/api/tiers';
 import {isObjectId} from '../../../utils/helpers';
 import {useEffect, useState} from 'react';
+import {useFilterableApi} from '@tryghost/admin-x-framework/hooks';
 
 const SIMPLE_SEGMENT_OPTIONS: MultiSelectOption[] = [{
     label: 'Free members',
@@ -29,7 +28,7 @@ const useDefaultRecipientsOptions = (selectedOption: string, defaultEmailRecipie
     const labelOption = (label: Label): MultiSelectOption => ({value: `label:${label.slug}`, label: label.name, color: 'grey'});
     const offerOption = (offer: Offer): MultiSelectOption => ({value: `offer_redemptions:${offer.id}`, label: offer.name, color: 'black'});
 
-    const loadOptions: LoadOptions = async (input, callback) => {
+    const loadOptions: LoadMultiSelectOptions = async (input, callback) => {
         const [tiersData, labelsData, offersData] = await Promise.all([tiers.loadData(input), labels.loadData(input), offers.loadData(input)]);
 
         const segmentOptionGroups: GroupBase<MultiSelectOption>[] = [
@@ -63,11 +62,11 @@ const useDefaultRecipientsOptions = (selectedOption: string, defaultEmailRecipie
 
     const initSelectedSegments = async () => {
         const filters = defaultEmailRecipientsFilter?.split(',') || [];
-        const tierIds: string[] = [], labelIds: string[] = [], offerIds: string[] = [];
+        const tierIds: string[] = [], labelSlugs: string[] = [], offerIds: string[] = [];
 
         for (const filter of filters) {
             if (filter.startsWith('label:')) {
-                labelIds.push(filter.replace('label:', ''));
+                labelSlugs.push(filter.replace('label:', ''));
             } else if (filter.startsWith('offer_redemptions:')) {
                 offerIds.push(filter.replace('offer_redemptions:', ''));
             } else if (isObjectId(filter)) {
@@ -76,9 +75,9 @@ const useDefaultRecipientsOptions = (selectedOption: string, defaultEmailRecipie
         }
 
         const options = await Promise.all([
-            tiers.loadInitialValues(tierIds).then(data => data.map(tierOption)),
-            labels.loadInitialValues(labelIds).then(data => data.map(labelOption)),
-            offers.loadInitialValues(offerIds).then(data => data.map(offerOption))
+            tiers.loadInitialValues(tierIds, 'id').then(data => data.map(tierOption)),
+            labels.loadInitialValues(labelSlugs, 'slug').then(data => data.map(labelOption)),
+            offers.loadInitialValues(offerIds, 'id').then(data => data.map(offerOption))
         ]).then(results => results.flat());
 
         setSelectedSegments(filters.map(filter => options.find(option => option.value === filter)!));

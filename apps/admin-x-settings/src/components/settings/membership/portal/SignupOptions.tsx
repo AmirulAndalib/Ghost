@@ -1,11 +1,7 @@
-import CheckboxGroup from '../../../../admin-x-ds/global/form/CheckboxGroup';
-import Form from '../../../../admin-x-ds/global/form/Form';
-import HtmlField from '../../../../admin-x-ds/global/form/HtmlField';
 import React, {useCallback, useEffect, useMemo} from 'react';
-import Toggle from '../../../../admin-x-ds/global/form/Toggle';
-import {CheckboxProps} from '../../../../admin-x-ds/global/form/Checkbox';
-import {Setting, SettingValue, checkStripeEnabled, getSettingValues} from '../../../../api/settings';
-import {Tier} from '../../../../api/tiers';
+import {CheckboxGroup, CheckboxProps, Form, HtmlField, Select, SelectOption, Toggle} from '@tryghost/admin-x-design-system';
+import {Setting, SettingValue, checkStripeEnabled, getSettingValues} from '@tryghost/admin-x-framework/api/settings';
+import {Tier, getPaidActiveTiers} from '@tryghost/admin-x-framework/api/tiers';
 import {useGlobalData} from '../../../providers/GlobalDataProvider';
 
 const SignupOptions: React.FC<{
@@ -17,9 +13,8 @@ const SignupOptions: React.FC<{
     setError: (key: string, error: string | undefined) => void
 }> = ({localSettings, updateSetting, localTiers, updateTier, errors, setError}) => {
     const {config} = useGlobalData();
-
-    const [membersSignupAccess, portalName, portalSignupTermsHtml, portalSignupCheckboxRequired, portalPlansJson] = getSettingValues(
-        localSettings, ['members_signup_access', 'portal_name', 'portal_signup_terms_html', 'portal_signup_checkbox_required', 'portal_plans']
+    const [membersSignupAccess, portalName, portalSignupTermsHtml, portalSignupCheckboxRequired, portalPlansJson, portalDefaultPlan] = getSettingValues(
+        localSettings, ['members_signup_access', 'portal_name', 'portal_signup_terms_html', 'portal_signup_checkbox_required', 'portal_plans', 'portal_default_plan']
     );
     const portalPlans = JSON.parse(portalPlansJson?.toString() || '[]') as string[];
 
@@ -53,27 +48,62 @@ const SignupOptions: React.FC<{
         }
 
         updateSetting('portal_plans', JSON.stringify(portalPlans));
-    };
 
-    // This is a bit unclear in current admin, maybe we should add a message if the settings are disabled?
-    const isDisabled = membersSignupAccess !== 'all';
-
-    const isStripeEnabled = checkStripeEnabled(localSettings, config!);
-
-    let tiersCheckboxes: CheckboxProps[] = [
-        {
-            checked: (portalPlans.includes('free')),
-            disabled: isDisabled,
-            label: 'Free',
-            value: 'free',
-            onChange: () => {
-                togglePlan('free');
+        // Check default plan is included
+        if (portalDefaultPlan === 'yearly') {
+            if (!portalPlans.includes('yearly') && portalPlans.includes('monthly')) {
+                updateSetting('portal_default_plan', 'monthly');
+            }
+        } else if (portalDefaultPlan === 'monthly') {
+            if (!portalPlans.includes('monthly')) {
+                // If both yearly and monthly are missing from plans, still set it to yearly
+                updateSetting('portal_default_plan', 'yearly');
             }
         }
+    };
+
+    const isSignupAllowed = membersSignupAccess === 'all' || membersSignupAccess === 'paid';
+    const isFreeSignupAllowed = membersSignupAccess === 'all';
+    const isStripeEnabled = checkStripeEnabled(localSettings, config!);
+
+    let tiersCheckboxes: CheckboxProps[] = [];
+
+    if (localTiers) {
+        localTiers.forEach((tier) => {
+            if (tier.type === 'free' && isFreeSignupAllowed) {
+                tiersCheckboxes.push({
+                    checked: (portalPlans.includes('free')),
+                    disabled: !isSignupAllowed,
+                    label: tier.name,
+                    value: 'free',
+                    testId: 'free-tier-checkbox',
+                    onChange: (checked) => {
+                        if (portalPlans.includes('free') && !checked) {
+                            portalPlans.splice(portalPlans.indexOf('free'), 1);
+                        }
+
+                        if (!portalPlans.includes('free') && checked) {
+                            portalPlans.push('free');
+                        }
+
+                        updateSetting('portal_plans', JSON.stringify(portalPlans));
+
+                        updateTier({...tier, visibility: checked ? 'public' : 'none'});
+                    }
+                });
+            }
+        });
+    }
+
+    const paidActiveTiers = getPaidActiveTiers(localTiers) || [];
+
+    const defaultPlanOptions: SelectOption[] = [
+        {value: 'yearly', label: 'Yearly'},
+        {value: 'monthly', label: 'Monthly'}
     ];
 
-    if (isStripeEnabled) {
-        localTiers.forEach((tier) => {
+    if (isStripeEnabled && paidActiveTiers.length > 0) {
+        paidActiveTiers.forEach((tier) => {
             tiersCheckboxes.push({
                 checked: (tier.visibility === 'public'),
                 label: tier.name,
@@ -83,44 +113,58 @@ const SignupOptions: React.FC<{
         });
     }
 
+    const arePaidTiersVisible = isStripeEnabled && paidActiveTiers.length > 0 && paidActiveTiers.some(tier => tier.visibility === 'public');
+
     return <div className='mt-7'><Form>
         <Toggle
             checked={Boolean(portalName)}
-            disabled={isDisabled}
+            direction='rtl'
+            disabled={!isSignupAllowed}
             label='Display name in signup form'
-            labelStyle='heading'
             onChange={e => updateSetting('portal_name', e.target.checked)}
         />
 
         <CheckboxGroup
             checkboxes={tiersCheckboxes}
-            title='Tiers available at startup'
+            title='Available tiers'
         />
 
-        {isStripeEnabled && localTiers.some(tier => tier.visibility === 'public') && (
-            <CheckboxGroup
-                checkboxes={[
-                    {
-                        checked: portalPlans.includes('monthly'),
-                        disabled: isDisabled,
-                        label: 'Monthly',
-                        value: 'monthly',
-                        onChange: () => {
-                            togglePlan('monthly');
+        {arePaidTiersVisible && (
+            <>
+                <CheckboxGroup
+                    checkboxes={[
+                        {
+                            checked: portalPlans.includes('monthly'),
+                            disabled: !isSignupAllowed,
+                            label: 'Monthly',
+                            value: 'monthly',
+                            onChange: () => {
+                                togglePlan('monthly');
+                            }
+                        },
+                        {
+                            checked: portalPlans.includes('yearly'),
+                            disabled: !isSignupAllowed,
+                            label: 'Yearly',
+                            value: 'yearly',
+                            onChange: () => {
+                                togglePlan('yearly');
+                            }
                         }
-                    },
-                    {
-                        checked: portalPlans.includes('yearly'),
-                        disabled: isDisabled,
-                        label: 'Yearly',
-                        value: 'yearly',
-                        onChange: () => {
-                            togglePlan('yearly');
-                        }
-                    }
-                ]}
-                title='Prices available at signup'
-            />
+                    ]}
+                    title='Available prices'
+                />
+                {(portalPlans.includes('yearly') && portalPlans.includes('monthly')) &&
+                    <Select
+                        options={defaultPlanOptions}
+                        selectedOption={defaultPlanOptions.find(option => option.value === portalDefaultPlan)}
+                        title='Default price at signup'
+                        onSelect={(option) => {
+                            updateSetting('portal_default_plan', option?.value ?? 'yearly');
+                        }}
+                    />
+                }
+            </>
         )}
 
         <HtmlField
@@ -135,7 +179,7 @@ const SignupOptions: React.FC<{
 
         {portalSignupTermsHtml?.toString() && <Toggle
             checked={Boolean(portalSignupCheckboxRequired)}
-            disabled={isDisabled}
+            disabled={!isSignupAllowed}
             label='Require agreement'
             labelStyle='heading'
             onChange={e => updateSetting('portal_signup_checkbox_required', e.target.checked)}

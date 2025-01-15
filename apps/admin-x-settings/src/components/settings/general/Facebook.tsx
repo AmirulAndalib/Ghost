@@ -1,15 +1,12 @@
-import ImageUpload from '../../../admin-x-ds/global/form/ImageUpload';
 import React from 'react';
-import SettingGroup from '../../../admin-x-ds/settings/SettingGroup';
-import SettingGroupContent from '../../../admin-x-ds/settings/SettingGroupContent';
-import TextField from '../../../admin-x-ds/global/form/TextField';
-import useHandleError from '../../../utils/api/handleError';
+import TopLevelGroup from '../../TopLevelGroup';
 import usePinturaEditor from '../../../hooks/usePinturaEditor';
 import useSettingGroup from '../../../hooks/useSettingGroup';
-import {ReactComponent as FacebookLogo} from '../../../admin-x-ds/assets/images/facebook-logo.svg';
-import {getImageUrl, useUploadImage} from '../../../api/images';
-import {getSettingValues} from '../../../api/settings';
-import {withErrorBoundary} from '../../../admin-x-ds/global/ErrorBoundary';
+import {APIError} from '@tryghost/admin-x-framework/errors';
+import {FacebookLogo, ImageUpload, SettingGroupContent, TextField, withErrorBoundary} from '@tryghost/admin-x-design-system';
+import {getImageUrl, useUploadImage} from '@tryghost/admin-x-framework/api/images';
+import {getSettingValues} from '@tryghost/admin-x-framework/api/settings';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
 const Facebook: React.FC<{ keywords: string[] }> = ({keywords}) => {
     const {
@@ -25,17 +22,10 @@ const Facebook: React.FC<{ keywords: string[] }> = ({keywords}) => {
 
     const {mutateAsync: uploadImage} = useUploadImage();
     // const [unsplashEnabled] = getSettingValues<boolean>(localSettings, ['unsplash']);
-    const [pinturaJsUrl] = getSettingValues<string>(localSettings, ['pintura_js_url']);
-    const [pinturaCssUrl] = getSettingValues<string>(localSettings, ['pintura_css_url']);
     // const [showUnsplash, setShowUnsplash] = useState<boolean>(false);
     const handleError = useHandleError();
 
-    const editor = usePinturaEditor(
-        {config: {
-            jsUrl: pinturaJsUrl || '',
-            cssUrl: pinturaCssUrl || ''
-        }}
-    );
+    const editor = usePinturaEditor();
 
     const [
         facebookTitle, facebookDescription, facebookImage, siteTitle, siteDescription
@@ -54,7 +44,11 @@ const Facebook: React.FC<{ keywords: string[] }> = ({keywords}) => {
             const imageUrl = getImageUrl(await uploadImage({file}));
             updateSetting('og_image', imageUrl);
         } catch (e) {
-            handleError(e);
+            const error = e as APIError;
+            if (error.response!.status === 415) {
+                error.message = 'Unsupported file type';
+            }
+            handleError(error);
         }
     };
 
@@ -105,15 +99,15 @@ const Facebook: React.FC<{ keywords: string[] }> = ({keywords}) => {
                     </ImageUpload>
                     <div className="flex flex-col gap-x-6 gap-y-7 px-4 pb-7">
                         <TextField
-                            clearBg={true}
                             inputRef={focusRef}
+                            maxLength={300}
                             placeholder={siteTitle}
                             title="Facebook title"
                             value={facebookTitle}
                             onChange={handleTitleChange}
                         />
                         <TextField
-                            clearBg={true}
+                            maxLength={300}
                             placeholder={siteDescription}
                             title="Facebook description"
                             value={facebookDescription}
@@ -126,7 +120,7 @@ const Facebook: React.FC<{ keywords: string[] }> = ({keywords}) => {
     );
 
     return (
-        <SettingGroup
+        <TopLevelGroup
             description='Customize structured data of your site'
             isEditing={isEditing}
             keywords={keywords}
@@ -140,7 +134,7 @@ const Facebook: React.FC<{ keywords: string[] }> = ({keywords}) => {
         >
             {values}
             {isEditing ? inputFields : null}
-        </SettingGroup>
+        </TopLevelGroup>
     );
 };
 

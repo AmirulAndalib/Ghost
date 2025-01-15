@@ -1,23 +1,17 @@
-import Button from '../../../../admin-x-ds/global/Button';
-import Form from '../../../../admin-x-ds/global/form/Form';
 import IntegrationHeader from './IntegrationHeader';
-import Modal from '../../../../admin-x-ds/global/modal/Modal';
 import NiceModal from '@ebay/nice-modal-react';
-import TextField from '../../../../admin-x-ds/global/form/TextField';
 import toast from 'react-hot-toast';
-import useRouting from '../../../../hooks/useRouting';
 import useSettingGroup from '../../../../hooks/useSettingGroup';
 import validator from 'validator';
+import {Button, Form, Modal, TextField, showToast} from '@tryghost/admin-x-design-system';
 import {ReactComponent as Icon} from '../../../../assets/icons/slack.svg';
-import {getSettingValues} from '../../../../api/settings';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
-import {useTestSlack} from '../../../../api/slack';
+import {getSettingValues, useTestSlack} from '@tryghost/admin-x-framework/api/settings';
+import {useRouting} from '@tryghost/admin-x-framework/routing';
 
 const SlackModal = NiceModal.create(() => {
     const {updateRoute} = useRouting();
-    const modal = NiceModal.useModal();
 
-    const {localSettings, updateSetting, handleSave, validate, errors, clearError} = useSettingGroup({
+    const {localSettings, updateSetting, handleSave, validate, errors, clearError, okProps} = useSettingGroup({
         onValidate: () => {
             const newErrors: Record<string, string> = {};
 
@@ -26,7 +20,8 @@ const SlackModal = NiceModal.create(() => {
             }
 
             return newErrors;
-        }
+        },
+        savingDelay: 500
     });
     const [slackUrl, slackUsername] = getSettingValues<string>(localSettings, ['slack_url', 'slack_username']);
 
@@ -37,28 +32,28 @@ const SlackModal = NiceModal.create(() => {
         if (await handleSave()) {
             await testSlack(null);
             showToast({
-                message: 'Check your Slack channel for the test message',
-                type: 'neutral'
+                title: 'Check your Slack channel for the test message',
+                type: 'info'
             });
         }
     };
+
+    const isDirty = localSettings.some(setting => setting.dirty);
 
     return (
         <Modal
             afterClose={() => {
                 updateRoute('integrations');
             }}
-            dirty={localSettings.some(setting => setting.dirty)}
-            okColor='black'
-            okLabel='Save & close'
+            cancelLabel='Close'
+            dirty={isDirty}
+            okColor={okProps.color}
+            okLabel={okProps.label || 'Save'}
             testId='slack-modal'
             title=''
             onOk={async () => {
                 toast.remove();
-                if (await handleSave()) {
-                    modal.remove();
-                    updateRoute('integrations');
-                }
+                await handleSave();
             }}
         >
             <IntegrationHeader

@@ -39,17 +39,22 @@ class RecommendationServiceWrapper {
     incomingRecommendationService;
 
     init() {
+        const config = require('../../../shared/config');
+        if (config.get('services:recommendations:enabled') === false) {
+            logging.info('[Recommendations] Service is disabled via config');
+            return;
+        }
+
         if (this.repository) {
             return;
         }
 
-        const labs = require('../../../shared/labs');
-        const config = require('../../../shared/config');
         const urlUtils = require('../../../shared/url-utils');
         const models = require('../../models');
         const sentry = require('../../../shared/sentry');
         const settings = require('../settings');
         const RecommendationEnablerService = require('./RecommendationEnablerService');
+
         const {
             BookshelfRecommendationRepository,
             RecommendationService,
@@ -58,7 +63,8 @@ class RecommendationServiceWrapper {
             BookshelfClickEventRepository,
             IncomingRecommendationController,
             IncomingRecommendationService,
-            IncomingRecommendationEmailRenderer
+            IncomingRecommendationEmailRenderer,
+            RecommendationMetadataService
         } = require('@tryghost/recommendations');
 
         const mentions = require('../mentions');
@@ -87,13 +93,22 @@ class RecommendationServiceWrapper {
             sentry
         });
 
+        const oembedService = require('../oembed');
+        const externalRequest = require('../../../server/lib/request-external.js');
+
+        const recommendationMetadataService = new RecommendationMetadataService({
+            oembedService,
+            externalRequest
+        });
+
         this.service = new RecommendationService({
             repository: this.repository,
             recommendationEnablerService,
             wellknownService,
             mentionSendingService: mentions.sendingService,
             clickEventRepository: this.clickEventRepository,
-            subscribeEventRepository: this.subscribeEventRepository
+            subscribeEventRepository: this.subscribeEventRepository,
+            recommendationMetadataService
         });
 
         const mail = require('../mail');
@@ -135,10 +150,8 @@ class RecommendationServiceWrapper {
             service: this.incomingRecommendationService
         });
 
-        if (labs.isSet('recommendations')) {
-            this.service.init().catch(logging.error);
-            this.incomingRecommendationService.init().catch(logging.error);
-        }
+        this.service.init().catch(logging.error);
+        this.incomingRecommendationService.init().catch(logging.error);
 
         const PATH_SUFFIX = '/.well-known/recommendations.json';
 
@@ -158,12 +171,10 @@ class RecommendationServiceWrapper {
 
         // Listen for incoming webmentions
         DomainEvents.subscribe(MentionCreatedEvent, async (event) => {
-            if (labs.isSet('recommendations')) {
-                // Check if this is a recommendation
-                if (event.data.mention.verified && isRecommendationUrl(event.data.mention.source)) {
-                    logging.info('[INCOMING RECOMMENDATION] Received recommendation from ' + event.data.mention.source);
-                    await this.incomingRecommendationService.sendRecommendationEmail(event.data.mention);
-                }
+            // Check if this is a recommendation
+            if (event.data.mention.verified && isRecommendationUrl(event.data.mention.source)) {
+                logging.info('[INCOMING RECOMMENDATION] Received recommendation from ' + event.data.mention.source);
+                await this.incomingRecommendationService.sendRecommendationEmail(event.data.mention);
             }
         });
     }

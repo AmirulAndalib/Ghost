@@ -2,6 +2,7 @@ const path = require('path');
 const errors = require('@tryghost/errors');
 const urlUtils = require('../../shared/url-utils');
 const config = require('../../shared/config');
+const labs = require('../../shared/labs');
 const storage = require('../adapters/storage');
 
 let nodes;
@@ -16,6 +17,28 @@ function populateNodes() {
 }
 
 module.exports = {
+    get blankDocument() {
+        return {
+            root: {
+                children: [
+                    {
+                        children: [],
+                        direction: null,
+                        format: '',
+                        indent: 0,
+                        type: 'paragraph',
+                        version: 1
+                    }
+                ],
+                direction: null,
+                format: '',
+                indent: 0,
+                type: 'root',
+                version: 1
+            }
+        };
+    },
+
     get lexicalHtmlRenderer() {
         if (!lexicalHtmlRenderer) {
             if (!nodes) {
@@ -77,11 +100,10 @@ module.exports = {
                     && imageTransform.shouldResizeFileExtension(ext)
                     && typeof storage.getStorage('images').saveRaw === 'function';
             },
-            createDocument() {
-                const {JSDOM} = require('jsdom');
-                return (new JSDOM()).window.document;
-            },
-            getCollectionPosts
+            getCollectionPosts,
+            feature: {
+                contentVisibility: labs.isSet('contentVisibility')
+            }
         }, userOptions);
 
         return await this.lexicalHtmlRenderer.render(lexical, options);
@@ -121,7 +143,17 @@ module.exports = {
 
     get htmlToLexicalConverter() {
         try {
-            return require('@tryghost/kg-html-to-lexical').htmlToLexical;
+            if (process.env.CI) {
+                console.time('require @tryghost/kg-html-to-lexical'); // eslint-disable-line no-console
+            }
+
+            const htmlToLexical = require('@tryghost/kg-html-to-lexical').htmlToLexical;
+
+            if (process.env.CI) {
+                console.timeEnd('require @tryghost/kg-html-to-lexical'); // eslint-disable-line no-console
+            }
+
+            return htmlToLexical;
         } catch (err) {
             throw new errors.InternalServerError({
                 message: 'Unable to convert from source HTML to Lexical',

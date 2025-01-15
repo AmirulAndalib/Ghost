@@ -1,122 +1,80 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Config} from '../../../../api/config';
-import {Setting, checkStripeEnabled, getSettingValue} from '../../../../api/settings';
-import {SiteData} from '../../../../api/site';
-import {Tier} from '../../../../api/tiers';
-import {useGlobalData} from '../../../providers/GlobalDataProvider';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {LoadingIndicator} from '@tryghost/admin-x-design-system';
 
 type PortalFrameProps = {
-    settings: Setting[];
-    tiers: Tier[];
-    selectedTab: string;
+    href: string;
+    onDestroyed?: () => void;
+    selectedTab?: string;
+    portalParent?: string;
 }
 
-function getPortalPreviewUrl({settings, config, tiers, siteData, selectedTab}: {
-    settings: Setting[];
-    config: Config;
-    tiers: Tier[];
-    siteData: SiteData | null;
-    selectedTab: string;
-}) {
-    if (!siteData?.url) {
-        return null;
+const PortalFrame: React.FC<PortalFrameProps> = ({href, onDestroyed, selectedTab, portalParent}) => {
+    if (!selectedTab) {
+        selectedTab = 'signup';
     }
-    let portalTiers = tiers.filter((t) => {
-        return t.visibility === 'public' && t.type === 'paid';
-    }).map(t => t.id);
-
-    const baseUrl = siteData.url.replace(/\/$/, '');
-    const portalBase = '/?v=modal-portal-settings#/portal/preview';
-
-    const portalPlans: string[] = JSON.parse(getSettingValue<string>(settings, 'portal_plans') || '');
-    const membersSignupAccess = getSettingValue<string>(settings, 'members_signup_access');
-    const allowSelfSignup = membersSignupAccess === 'all' && (!checkStripeEnabled(settings, config) || portalPlans.includes('free'));
-
-    const settingsParam = new URLSearchParams();
-    settingsParam.append('button', getSettingValue(settings, 'portal_button') ? 'true' : 'false');
-    settingsParam.append('name', getSettingValue(settings, 'portal_name') ? 'true' : 'false');
-    settingsParam.append('isFree', portalPlans.includes('free') ? 'true' : 'false');
-    settingsParam.append('isMonthly', checkStripeEnabled(settings, config) && portalPlans.includes('monthly') ? 'true' : 'false');
-    settingsParam.append('isYearly', checkStripeEnabled(settings, config) && portalPlans.includes('yearly') ? 'true' : 'false');
-    settingsParam.append('page', selectedTab === 'account' ? 'accountHome' : 'signup');
-    settingsParam.append('buttonIcon', encodeURIComponent(getSettingValue(settings, 'portal_button_icon') || 'icon-1'));
-    settingsParam.append('signupButtonText', encodeURIComponent(getSettingValue(settings, 'portal_button_signup_text') || ''));
-    settingsParam.append('membersSignupAccess', getSettingValue(settings, 'members_signup_access') || 'all');
-    settingsParam.append('allowSelfSignup', allowSelfSignup ? 'true' : 'false');
-    settingsParam.append('signupTermsHtml', getSettingValue(settings, 'portal_signup_terms_html') || '');
-    settingsParam.append('signupCheckboxRequired', getSettingValue(settings, 'portal_signup_checkbox_required') ? 'true' : 'false');
-    settingsParam.append('portalProducts', encodeURIComponent(portalTiers.join(','))); // assuming that it might be more than 1
-
-    if (portalPlans && portalPlans.length) {
-        settingsParam.append('portalPrices', encodeURIComponent(portalPlans.join(',')));
-    }
-
-    const accentColor = getSettingValue(settings, 'accent_color');
-    if (accentColor !== undefined && accentColor !== null) {
-        settingsParam.append('accentColor', encodeURIComponent(accentColor));
-    }
-
-    const portalButtonStyle = getSettingValue(settings, 'portal_button_style');
-    if (portalButtonStyle) {
-        settingsParam.append('buttonStyle', encodeURIComponent(portalButtonStyle));
-    }
-
-    settingsParam.append('disableBackground', 'false');
-
-    return `${baseUrl}${portalBase}?${settingsParam.toString()}`;
-}
-
-const PortalFrame: React.FC<PortalFrameProps> = ({settings, tiers, selectedTab}) => {
-    const {
-        siteData,
-        config
-    } = useGlobalData();
-
     const iframeRef = useRef<HTMLIFrameElement>(null);
-    const [portalReady, setPortalReady] = useState(false);
+    const [hasLoaded, setHasLoaded] = useState<boolean>(false);
+    const [isInvisible, setIsInvisible] = useState<boolean>(true);
 
-    let href = getPortalPreviewUrl({
-        settings,
-        config,
-        tiers,
-        siteData,
-        selectedTab
-    });
+    const makeVisible = useCallback(() => {
+        setTimeout(() => {
+            if (iframeRef.current) {
+                setIsInvisible(false);
+            }
+        }, 300);
+    }, [iframeRef]);
 
     useEffect(() => {
-        const messageListener = (event: MessageEvent<'portal-ready' | {type: string}>) => {
+        const messageListener = (event: MessageEvent) => {
             if (!href) {
                 return;
             }
-            const srcURL = new URL(href);
             const originURL = new URL(event.origin);
 
-            if (originURL.origin === srcURL.origin) {
-                if (event.data === 'portal-ready' || event.data.type === 'portal-ready') {
-                    setPortalReady(true);
+            if (originURL.origin === new URL(href).origin) {
+                if (event?.data?.type === 'portal-preview-ready') {
+                    makeVisible();
                 }
             }
         };
 
         window.addEventListener('message', messageListener, true);
-        return () => window.removeEventListener('message', messageListener, true);
-    }, [href]);
+
+        return () => {
+            window.removeEventListener('message', messageListener, true);
+            onDestroyed?.();
+        };
+    }, [href, onDestroyed, makeVisible, hasLoaded]);
 
     if (!href) {
         return null;
     }
 
+    let loaderClassNames = 'mt-[-7%] flex h-screen items-center justify-center';
+    let loaderVisibility = 'hidden';
+
+    if (portalParent === 'preview') {
+        loaderClassNames = 'absolute z-50 mt-[-7%] flex h-screen items-center justify-center';
+        loaderVisibility = 'invisible';
+    } else if (portalParent === 'offers') {
+        loaderClassNames = 'absolute z-50 flex w-full h-full items-center justify-center';
+        loaderVisibility = 'invisible';
+    }
+
     return (
-        <>
+        <>{isInvisible && <div className={loaderClassNames}><span><LoadingIndicator /></span></div>}
             <iframe
                 ref={iframeRef}
-                className={!portalReady ? 'hidden' : ''}
+                className={!isInvisible && hasLoaded ? '' : loaderVisibility}
                 data-testid="portal-preview"
                 height="100%"
                 src={href}
                 title="Portal Preview"
                 width="100%"
-            ></iframe>
+                onLoad={() => {
+                    setHasLoaded(true);
+                }}
+            />
         </>
     );
 };

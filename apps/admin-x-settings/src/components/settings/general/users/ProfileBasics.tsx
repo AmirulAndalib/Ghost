@@ -1,13 +1,11 @@
 import CustomHeader from './CustomHeader';
 import RoleSelector from './RoleSelector';
-import SettingGroup from '../../../../admin-x-ds/settings/SettingGroup';
-import SettingGroupContent from '../../../../admin-x-ds/settings/SettingGroupContent';
-import TextField from '../../../../admin-x-ds/global/form/TextField';
+import {SettingGroup, SettingGroupContent, TextField} from '@tryghost/admin-x-design-system';
 import {UserDetailProps} from '../UserDetailModal';
-import {hasAdminAccess} from '../../../../api/users';
+import {hasAdminAccess} from '@tryghost/admin-x-framework/api/users';
 import {useGlobalData} from '../../../providers/GlobalDataProvider';
 
-const BasicInputs: React.FC<UserDetailProps> = ({errors, validators, clearError, user, setUserData}) => {
+const BasicInputs: React.FC<UserDetailProps> = ({errors, clearError, user, setUserData}) => {
     const {currentUser} = useGlobalData();
 
     return (
@@ -15,11 +13,9 @@ const BasicInputs: React.FC<UserDetailProps> = ({errors, validators, clearError,
             <TextField
                 error={!!errors?.name}
                 hint={errors?.name || 'Use real name so people can recognize you'}
+                maxLength={191}
                 title="Full name"
                 value={user.name}
-                onBlur={(e) => {
-                    validators.name({name: e.target.value});
-                }}
                 onChange={(e) => {
                     setUserData({...user, name: e.target.value});
                 }}
@@ -28,18 +24,17 @@ const BasicInputs: React.FC<UserDetailProps> = ({errors, validators, clearError,
             <TextField
                 error={!!errors?.email}
                 hint={errors?.email || 'Used for notifications'}
+                maxLength={191}
                 title="Email"
                 value={user.email}
-                onBlur={(e) => {
-                    validators.email({email: e.target.value});
-                }}
                 onChange={(e) => {
                     setUserData({...user, email: e.target.value});
                 }}
                 onKeyDown={() => clearError('email')}
             />
             <TextField
-                hint="https://example.com/author"
+                hint={`https://example.com/author/${user.slug}`}
+                maxLength={191}
                 title="Slug"
                 value={user.slug}
                 onChange={(e) => {

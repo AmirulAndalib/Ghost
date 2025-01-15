@@ -33,12 +33,12 @@ const mongoTransformer = flowRight(statusTransformer, rejectNonStatusTransformer
 
 /**
  * @typedef {object} BaseOptions
- * @prop {import('knex').Transaction} transacting
+ * @prop {import('knex').Knex.Transaction} transacting
  */
 
 /**
  * @typedef {object} ListOptions
- * @prop {import('knex').Transaction} transacting
+ * @prop {import('knex').Knex.Transaction} transacting
  * @prop {string} filter
  */
 
@@ -56,7 +56,7 @@ class OfferBookshelfRepository {
 
     /**
      * @template T
-     * @param {(t: import('knex').Transaction) => Promise<T>} cb
+     * @param {(t: import('knex').Knex.Transaction) => Promise<T>} cb
      * @returns {Promise<T>}
      */
     async createTransaction(cb) {
@@ -97,11 +97,18 @@ class OfferBookshelfRepository {
      */
     async mapToOffer(model, options) {
         const json = model.toJSON();
-
         const count = await this.OfferRedemptionModel.where({offer_id: json.id}).count('id', {
             transacting: options.transacting
         });
+
+        const lastRedeemed = await this.OfferRedemptionModel.where({offer_id: json.id}).orderBy('created_at', 'DESC').fetchAll({
+            transacting: options.transacting,
+            limit: 1
+        });
+
         try {
+            const lastRedeemedObject = lastRedeemed.toJSON();
+
             return await Offer.create({
                 id: json.id,
                 name: json.name,
@@ -119,7 +126,9 @@ class OfferBookshelfRepository {
                 tier: {
                     id: json.product.id,
                     name: json.product.name
-                }
+                },
+                created_at: json.created_at,
+                last_redeemed: lastRedeemedObject.length > 0 ? lastRedeemedObject[0].created_at : null
             }, null);
         } catch (err) {
             logger.error(err);

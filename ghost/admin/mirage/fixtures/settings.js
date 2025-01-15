@@ -49,7 +49,7 @@ export default [
     setting('site', 'twitter_description', null),
 
     // THEME
-    setting('theme', 'active_theme', 'Source'),
+    setting('theme', 'active_theme', 'source'),
 
     // PRIVATE
     setting('private', 'is_private', false),
@@ -75,8 +75,9 @@ export default [
 
     // PORTAL
     setting('portal', 'portal_name', true),
-    setting('portal', 'portal_button', true),
+    setting('portal', 'portal_button', false),
     setting('portal', 'portal_plans', JSON.stringify(['free'])),
+    setting('portal', 'portal_default_plan', 'yearly'),
     setting('portal', 'portal_products', JSON.stringify([])),
     setting('portal', 'portal_button_style', 'icon-and-text'),
     setting('portal', 'portal_button_icon', null),
@@ -111,7 +112,6 @@ export default [
     // LABS
     setting('labs', 'labs', JSON.stringify({
         // Keep the GA flags that are not yet cleaned up in frontend code here
-        lexicalEditor: true
     })),
 
     // SLACK
@@ -129,6 +129,6 @@ export default [
     setting('editor', 'editor_default_email_recipients_filter', 'all'),
 
     // DONATIONS
-    setting('donations_suggested_amount', 'donations', 0),
+    setting('donations_suggested_amount', 'donations', 500),
     setting('donations_currency', 'donations', 'USD')
 ];

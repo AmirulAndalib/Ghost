@@ -1,13 +1,9 @@
-import Button from '../../../../admin-x-ds/global/Button';
-import Heading from '../../../../admin-x-ds/global/Heading';
-import List from '../../../../admin-x-ds/global/List';
-import ListItem from '../../../../admin-x-ds/global/ListItem';
 import NiceModal from '@ebay/nice-modal-react';
 import React, {ReactNode, useState} from 'react';
-import useHandleError from '../../../../utils/api/handleError';
-import {ConfirmationModalContent} from '../../../../admin-x-ds/global/modal/ConfirmationModal';
-import {InstalledTheme, ThemeProblem, useActivateTheme} from '../../../../api/themes';
-import {showToast} from '../../../../admin-x-ds/global/Toast';
+import useCustomFonts from '../../../../hooks/useCustomFonts';
+import {Button, ConfirmationModalContent, Heading, List, ListItem, showToast} from '@tryghost/admin-x-design-system';
+import {InstalledTheme, ThemeProblem, useActivateTheme} from '@tryghost/admin-x-framework/api/themes';
+import {useHandleError} from '@tryghost/admin-x-framework/hooks';
 
 export const ThemeProblemView = ({problem}:{problem: ThemeProblem}) => {
     const [isExpanded, setExpanded] = useState(false);
@@ -47,10 +43,11 @@ const ThemeInstalledModal: React.FC<{
     onActivate?: () => void;
 }> = ({title, prompt, installedTheme, onActivate}) => {
     const {mutateAsync: activateTheme} = useActivateTheme();
+    const {refreshActiveThemeData} = useCustomFonts();
     const handleError = useHandleError();
 
     let errorPrompt = null;
-    if (installedTheme.gscan_errors) {
+    if (installedTheme && installedTheme.gscan_errors) {
         errorPrompt = <div className="mt-6">
             <List hint={<>Highly recommended to fix, functionality <strong>could</strong> be restricted</>} title="Errors">
                 {installedTheme.gscan_errors?.map(error => <ThemeProblemView problem={error} />)}
@@ -59,7 +56,7 @@ const ThemeInstalledModal: React.FC<{
     }
 
     let warningPrompt = null;
-    if (installedTheme.warnings) {
+    if (installedTheme && installedTheme.warnings) {
         warningPrompt = <div className="mt-10">
             <List title="Warnings">
                 {installedTheme.warnings?.map(warning => <ThemeProblemView problem={warning} />)}
@@ -90,8 +87,10 @@ const ThemeInstalledModal: React.FC<{
                 try {
                     const resData = await activateTheme(installedTheme.name);
                     const updatedTheme = resData.themes[0];
+                    refreshActiveThemeData();
 
                     showToast({
+                        title: 'Theme activated',
                         type: 'success',
                         message: <div><span className='capitalize'>{updatedTheme.name}</span> is now your active theme.</div>
                     });

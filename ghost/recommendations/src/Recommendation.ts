@@ -103,15 +103,9 @@ export class Recommendation {
             });
         }
 
-        if (properties.description && properties.description.length > 2000) {
+        if (properties.description && properties.description.length > 200) {
             throw new errors.ValidationError({
-                message: 'Description must be less than 2000 characters'
-            });
-        }
-
-        if (properties.excerpt && properties.excerpt.length > 2000) {
-            throw new errors.ValidationError({
-                message: 'Excerpt must be less than 2000 characters'
+                message: 'Description must be less than 200 characters'
             });
         }
     }
@@ -121,17 +115,17 @@ export class Recommendation {
             this.description = null;
         }
 
-        this.url = this.cleanURL(this.url);
+        if (this.excerpt !== null && this.excerpt.length === 0) {
+            this.excerpt = null;
+        }
+
+        if (this.excerpt !== null && this.excerpt.length > 2000) {
+            this.excerpt = this.excerpt.slice(0, 1997) + '...';
+        }
+
         this.createdAt.setMilliseconds(0);
         this.updatedAt?.setMilliseconds(0);
     }
-
-    cleanURL(url: URL) {
-        url.search = '';
-        url.hash = '';
-
-        return url;
-    };
 
     static create(data: RecommendationCreateData) {
         const id = data.id ?? ObjectId().toString();
@@ -181,13 +175,18 @@ export class Recommendation {
     edit(properties: EditRecommendation) {
         // Delete undefined properties
         const newProperties = this.plain;
+        let didChange = false;
 
         for (const key of Object.keys(properties) as (keyof EditRecommendation)[]) {
-            if (Object.prototype.hasOwnProperty.call(properties, key) && properties[key] !== undefined) {
+            if (Object.prototype.hasOwnProperty.call(properties, key) && properties[key] !== undefined && properties[key] !== newProperties[key]) {
                 (newProperties as Record<string, unknown>)[key] = properties[key] as unknown;
+                didChange = true;
             }
         }
 
+        if (!didChange) {
+            return;
+        }
         newProperties.updatedAt = new Date();
 
         const created = Recommendation.create(newProperties);

@@ -25,7 +25,7 @@ describe('Acceptance: Error Handling', function () {
                 let role = this.server.create('role', {name: 'Administrator'});
                 this.server.create('user', {roles: [role]});
 
-                return await authenticateSession();
+                await authenticateSession();
             });
 
             // TODO: can't replicate this with the Lexical editor... skip for now
@@ -47,7 +47,7 @@ describe('Acceptance: Error Handling', function () {
                 // try navigating back to the content list
                 await click('[data-test-link="posts"]');
 
-                expect(currentRouteName()).to.equal('editor.edit');
+                expect(currentRouteName()).to.equal('lexical-editor.edit');
             });
 
             it('displays alert and aborts the transition when navigating', async function () {
@@ -90,7 +90,7 @@ describe('Acceptance: Error Handling', function () {
             let roles = this.server.schema.roles.where({name: 'Administrator'});
             this.server.create('user', {roles});
 
-            return await authenticateSession();
+            await authenticateSession();
         });
 
         it('handles Ember Data HTML response', async function () {
@@ -103,7 +103,7 @@ describe('Acceptance: Error Handling', function () {
 
             expect(findAll('.gh-alert').length).to.equal(1);
             expect(find('.gh-alert').textContent).to.not.match(/html>/);
-            expect(find('.gh-alert').textContent).to.match(/Request was rejected due to server error/);
+            expect(find('.gh-alert').textContent).to.match(/An unexpected error occurred, please try again./);
         });
 
         it('handles ember-ajax HTML response', async function () {
@@ -118,7 +118,7 @@ describe('Acceptance: Error Handling', function () {
 
             expect(findAll('.gh-alert').length).to.equal(1);
             expect(find('.gh-alert').textContent).to.not.match(/html>/);
-            expect(find('.gh-alert').textContent).to.match(/Request was rejected due to server error/);
+            expect(find('.gh-alert').textContent).to.match(/An unexpected error occurred, please try again./);
         });
     });
 });
